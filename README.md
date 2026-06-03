@@ -1,0 +1,1 @@
+The purpose of this project is to create an ambient environment station that displays the temperature, humidity and atmospheric pressure in the environment.

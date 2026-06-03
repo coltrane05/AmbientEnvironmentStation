@@ -1,0 +1,14 @@
+
+# Ignore build artifacts
+*.elf
+*.o
+*.bin
+*.hex
+*.map
+
+# Ignore in all directories
+**/*.elf
+**/*.o
+**/*.bin
+**/*.hex
+**/*.map
