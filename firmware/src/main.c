@@ -3,13 +3,14 @@
 #include "rcc.h"
 #include "gpio.h"
 #include "led_state_machine.h"
+#include "register_macros.h"
 
 unsigned int countdown_clicks;
 
 
 void dummy_delay(unsigned int clicks) {
     while(clicks-- > 0) {
-        if (!(GPIOC->IDR >> 13) & 1) {
+        if (!((GPIOC->IDR >> 13) & 1)) {
             break;
         }
         __asm("nop");
@@ -19,12 +20,12 @@ void dummy_delay(unsigned int clicks) {
 int main(void) {
 
     // Enable Clock for GPIO ports A and C
-    RCC->AHB1ENR |= (1 << 0); // Port A
-    RCC->AHB1ENR |= (1 << 2); // Port C
+    SET_BIT(RCC->AHB1ENR, 0); // Port A
+    SET_BIT(RCC->AHB1ENR, 2); // Port C
 
     // Set pin modes for Port A pin 5 and Port C pin 13
-    GPIOA->MODER |= (0b01 << (2 * 5)); // Output Port A pin 5 User Led
-    GPIOC->MODER |= (0b00 << (2 * 13)); // Input Port C pin 13 User Button
+    SET_2BIT_FIELD(GPIOA->MODER, 5, 0b01); // Output Port A pin 5 User Led
+    SET_2BIT_FIELD(GPIOC->MODER, 13, 0b00); // Input Port C pin 13 User Button
 
     stateMachine_t stateMachine;
 
@@ -33,7 +34,7 @@ int main(void) {
     while(1) {
 
         
-        if (!(GPIOC->IDR >> 13) & 0x1) {
+        if (!GET_BIT(GPIOC->IDR, 13)) {
             state_machine_run_iteration(&stateMachine, EV_BUTTON_PRESSED, &countdown_clicks);
             for (int i = 0; i < 500000; i++) {
                 __asm("nop");
@@ -42,7 +43,7 @@ int main(void) {
         if (stateMachine.currState != ST_LED_OFF) {
             if (stateMachine.currState != ST_LED_SOLID) {
                 dummy_delay(countdown_clicks);
-                GPIOA->ODR ^= (1 << 5);
+                TOGGLE_BIT(GPIOA->ODR, 5);
             }
         }
     }

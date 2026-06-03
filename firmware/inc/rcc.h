@@ -1,3 +1,7 @@
+#ifndef RCC_H
+#define RCC_H
+
+
 #include <stdint.h>
 
 #define RCC_BASE 0x40023800UL
@@ -10,3 +14,5 @@ typedef struct {
     volatile uint32_t AHB1ENR;
 } Custom_RCC_t;
 #define RCC ((Custom_RCC_t *) RCC_BASE)
+
+#endif

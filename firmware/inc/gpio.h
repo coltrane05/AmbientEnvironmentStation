@@ -1,3 +1,6 @@
+#ifndef GPIO_H
+#define GPIO_H
+
 #include <stdint.h>
 
 #define GPIOA_BASE 0x40020000UL
@@ -17,3 +20,5 @@ typedef struct {
 
 #define GPIOC_BASE 0x40020800UL
 #define GPIOC ((Custom_GPIO_t *) GPIOC_BASE)
+
+#endif

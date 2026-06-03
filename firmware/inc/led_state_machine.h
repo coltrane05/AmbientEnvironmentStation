@@ -1,3 +1,6 @@
+#ifndef LED_STATE_MACHINE_H
+#define LED_STATE_MACHINE_H
+
 typedef enum {
     ST_INIT,
     ST_LED_OFF,
@@ -36,3 +39,5 @@ void led_solid(unsigned int *countdown_clicks);
 
 void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event, unsigned int *countdown_clicks);
 void state_machine_init(stateMachine_t *stateMachine);
+
+#endif

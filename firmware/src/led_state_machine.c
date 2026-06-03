@@ -1,5 +1,6 @@
 #include "led_state_machine.h"
 #include "gpio.h"
+#include "register_macros.h"
 
 static stateTransMatrixRow_t LEDStateTransMatrix[] = {
     {ST_INIT, EV_BUTTON_PRESSED, ST_LED_SLOW},
@@ -20,11 +21,11 @@ static stateFunctionRow_t LEDStateFunctionArray[] = {
 };
 
 void led_init(unsigned int *countdown_clicks) {
-    GPIOA->ODR &= ~(1 << 5);
+    CLEAR_BIT(GPIOA->ODR, 5);
 }
 
 void led_off(unsigned int *countdown_clicks) {
-    GPIOA->ODR &= ~(1 << 5);
+    CLEAR_BIT(GPIOA->ODR, 5);
 }
 
 void led_slow(unsigned int *countdown_clicks) {
@@ -40,7 +41,7 @@ void led_fast(unsigned int *countdown_clicks) {
 }
 
 void led_solid(unsigned int *countdown_clicks) {
-    GPIOA->ODR |= (1 << 5);
+    SET_BIT(GPIOA->ODR, 5);
 }
 
 void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event, unsigned int *countdown_clicks) {
