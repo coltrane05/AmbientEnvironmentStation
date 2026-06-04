@@ -23,21 +23,21 @@ typedef struct {
 
 typedef struct {
     const char * name;
-    void (*func)(unsigned int *countdown_clicks);
+    void (*func)(void);
 } stateFunctionRow_t;
 
 typedef struct {
     state_t currState;
 } stateMachine_t;
 
-void led_init(unsigned int *countdown_clicks);
-void led_off(unsigned int *countdown_clicks);
-void led_slow(unsigned int *countdown_clicks);
-void led_medium(unsigned int *countdown_clicks);
-void led_fast(unsigned int *countdown_clicks);
-void led_solid(unsigned int *countdown_clicks);
+void led_init(void);
+void led_off(void);
+void led_slow(void);
+void led_medium(void);
+void led_fast(void);
+void led_solid(void);
 
-void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event, unsigned int *countdown_clicks);
+void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event);
 void state_machine_init(stateMachine_t *stateMachine);
 
 #endif

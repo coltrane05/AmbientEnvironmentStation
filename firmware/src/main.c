@@ -4,9 +4,19 @@
 #include "gpio.h"
 #include "led_state_machine.h"
 #include "register_macros.h"
+#include "timx.h"
+#include "nvic.h"
 
-unsigned int countdown_clicks;
+stateMachine_t stateMachine;
 
+void TIM2_IRQHandler(void) {
+    if (TIM2->SR & (1U << 0)) {
+        TIM2->SR = 0;
+        if (stateMachine.currState != ST_LED_OFF && stateMachine.currState != ST_LED_SOLID) {
+            TOGGLE_BIT(GPIOA->ODR, 5);
+        }
+    }
+}
 
 void dummy_delay(unsigned int clicks) {
     while(clicks-- > 0) {
@@ -19,32 +29,36 @@ void dummy_delay(unsigned int clicks) {
 
 int main(void) {
 
-    // Enable Clock for GPIO ports A and C
-    SET_BIT(RCC->AHB1ENR, 0); // Port A
-    SET_BIT(RCC->AHB1ENR, 2); // Port C
+    // Enable Clock for periferals
+    SET_BIT(RCC->AHB1ENR, 0); // GPIO Port A
+    SET_BIT(RCC->AHB1ENR, 2); // GPIO Port C
+    SET_BIT(RCC->APB1ENR, 0); // TIM2
+
+    //TIM2 setup
+    TIM2->PSC = 15999;
+    TIM2->ARR = 999;
+    SET_BIT(TIM2->DIER, 0);
+    SET_BIT(TIM2->EGR, 0);
+    TIM2->SR = 0;
+    SET_BIT(TIM2->CR1, 0);
+    NVIC->ISER[0] = (1U << 28); // TIM2 Interrupt is (IRQ 28)
+
+    // See page 59 of PM0214 for instructions related to CMSIS functions
+    __asm("cpsie i"); // Enable global iterrupts
 
     // Set pin modes for Port A pin 5 and Port C pin 13
     SET_2BIT_FIELD(GPIOA->MODER, 5, 0b01); // Output Port A pin 5 User Led
     SET_2BIT_FIELD(GPIOC->MODER, 13, 0b00); // Input Port C pin 13 User Button
 
-    stateMachine_t stateMachine;
-
     state_machine_init(&stateMachine);
 
     while(1) {
-
-        
         if (!GET_BIT(GPIOC->IDR, 13)) {
-            state_machine_run_iteration(&stateMachine, EV_BUTTON_PRESSED, &countdown_clicks);
+            state_machine_run_iteration(&stateMachine, EV_BUTTON_PRESSED);
             for (int i = 0; i < 500000; i++) {
                 __asm("nop");
             }
-        }
-        if (stateMachine.currState != ST_LED_OFF) {
-            if (stateMachine.currState != ST_LED_SOLID) {
-                dummy_delay(countdown_clicks);
-                TOGGLE_BIT(GPIOA->ODR, 5);
-            }
+            SET_BIT(TIM2->EGR, 0);
         }
     }
     return 0;
