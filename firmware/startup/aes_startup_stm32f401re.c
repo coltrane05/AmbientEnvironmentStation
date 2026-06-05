@@ -1,9 +1,21 @@
 #include <stdint.h>
 
+// This file contains the startup code for the STM32F401RE microcontroller.
+// It defines the interrupt vector table, the default handlers for interrupts
+// and the Reset_Handler which initializes the .data and .bss sections before calling main().
+
+// The symbols _estack, _etext, _edata, _sdata, _sbss, and _ebss are defined in the linker script.
 extern uint32_t _estack, _etext, _edata, _sdata, _sbss, _ebss;
+
 
 int main(void);
 
+// Forward declaration of the default handlers for interrupts.
+// The __attribute__((weak, alias("Default_Handler"))) syntax allows us to define a 
+// default handler for each interrupt, which can be overridden by the user if needed. 
+// If the user does not provide a specific handler for an interrupt, the Default_Handler will be used, 
+// which simply enters an infinite loop, allowing the user to identify that an unexpected interrupt has occurred
+// using OpenOCD or a similar debugging tool.
 void Reset_Handler(void);
 void Default_Handler(void);
 void NMI_Handler(void) __attribute__((weak, alias("Default_Handler")));
@@ -72,7 +84,10 @@ void I2C3_ER_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
 void FPU_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
 void SPI4_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
 
-
+// The interrupt vector table. This is an array of function pointers that the
+// processor uses to determine which function to call when an interrupt occurs.
+// The __attribute__((section(".isr_vector"))) syntax tells the linker to place this vector table
+// at the beginning of the flash memory, which is where the processor expects to find it.
 __attribute__((section(".isr_vector")))
 void (* const vector_table[])(void) = {
     (void (*)(void))(&_estack),
@@ -178,10 +193,13 @@ void (* const vector_table[])(void) = {
     SPI4_IRQHandler
 };
 
+// The Default_Handler is a catch-all for any interrupts that are not specifically handled by the user.
 void Default_Handler(void) {
     while(1);
 }
 
+// The Reset_Handler is called when the microcontroller is reset. 
+// It initializes the .data and .bss sections before calling main().
 void Reset_Handler(void) {
     uint32_t *flash_data_src = &_etext;
     uint32_t *ram_data_dest = &_sdata;

@@ -9,11 +9,12 @@
 
 stateMachine_t stateMachine;
 
+// TIM2 interrupt handler. This will be called at every timer event
 void TIM2_IRQHandler(void) {
     if (TIM2->SR & (1U << 0)) {
-        TIM2->SR = 0;
+        TIM2->SR = 0; // Clear the update interrupt flag
         if (stateMachine.currState != ST_LED_OFF && stateMachine.currState != ST_LED_SOLID) {
-            TOGGLE_BIT(GPIOA->ODR, 5);
+            TOGGLE_BIT(GPIOA->ODR, 5); // Toggle the LED on Port A pin 5
         }
     }
 }
@@ -35,12 +36,11 @@ int main(void) {
     SET_BIT(RCC->APB1ENR, 0); // TIM2
 
     //TIM2 setup
-    TIM2->PSC = 15999;
-    TIM2->ARR = 999;
-    SET_BIT(TIM2->DIER, 0);
-    SET_BIT(TIM2->EGR, 0);
-    TIM2->SR = 0;
-    SET_BIT(TIM2->CR1, 0);
+    TIM2->PSC = 15999; // Prescaler value. With 16MHz clock, this gives 1ms period
+    SET_BIT(TIM2->DIER, 0); // Enable Update Interrupt
+    SET_BIT(TIM2->EGR, 0); // Generate an update event to load the prescaler value immediately
+    TIM2->SR = 0; // Clear pending interrupt
+    SET_BIT(TIM2->CR1, 0); // Enable Counter
     NVIC->ISER[0] = (1U << 28); // TIM2 Interrupt is (IRQ 28)
 
     // See page 59 of PM0214 for instructions related to CMSIS functions
@@ -50,7 +50,7 @@ int main(void) {
     SET_2BIT_FIELD(GPIOA->MODER, 5, 0b01); // Output Port A pin 5 User Led
     SET_2BIT_FIELD(GPIOC->MODER, 13, 0b00); // Input Port C pin 13 User Button
 
-    state_machine_init(&stateMachine);
+    state_machine_init(&stateMachine); // Initialize state machine
 
     while(1) {
         if (!GET_BIT(GPIOC->IDR, 13)) {
@@ -58,7 +58,7 @@ int main(void) {
             for (int i = 0; i < 500000; i++) {
                 __asm("nop");
             }
-            SET_BIT(TIM2->EGR, 0);
+            SET_BIT(TIM2->EGR, 0); // Generate an update event to reset timer.
         }
     }
     return 0;

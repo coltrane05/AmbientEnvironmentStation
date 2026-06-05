@@ -3,6 +3,8 @@
 #include "register_macros.h"
 #include "timx.h"
 
+// State transition matrix for the state machine.
+// Each row defines a transition from a current state to a next state based on an event.
 static stateTransMatrixRow_t LEDStateTransMatrix[] = {
     {ST_INIT, EV_BUTTON_PRESSED, ST_LED_SLOW},
     {ST_LED_OFF, EV_BUTTON_PRESSED, ST_LED_SLOW},
@@ -12,6 +14,8 @@ static stateTransMatrixRow_t LEDStateTransMatrix[] = {
     {ST_LED_SOLID, EV_BUTTON_PRESSED, ST_LED_OFF}
 };
 
+// Array of function pointers corresponding to each state.
+// Each function will be called when the state machine transitions to the corresponding state.
 static stateFunctionRow_t LEDStateFunctionArray[] = {
     {"ST_INIT", &led_init},
     {"ST_LED_OFF", &led_off},
@@ -21,6 +25,8 @@ static stateFunctionRow_t LEDStateFunctionArray[] = {
     {"ST_LED_SOLID", &led_solid},
 };
 
+// Function definitions for each state.
+// These functions will be called when the state machine transitions to the corresponding state.
 void led_init(void) {
     CLEAR_BIT(GPIOA->ODR, 5);
 }
@@ -51,6 +57,7 @@ void led_solid(void) {
     SET_BIT(GPIOA->ODR, 5);
 }
 
+// Function to run one iteration of the state machine based on the current state and an event.
 void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event) {
     for (int i = 0; i < sizeof(LEDStateTransMatrix)/sizeof(LEDStateTransMatrix[0]); i++) {
         if(LEDStateTransMatrix[i].currState == stateMachine->currState) {
@@ -64,6 +71,7 @@ void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event) {
     }
 }
 
+// Function to initialize the state machine. Sets the initial state and performs any necessary setup.
 void state_machine_init(stateMachine_t * stateMachine) {
     stateMachine->currState = ST_LED_OFF;
     CLEAR_BIT(GPIOA->ODR, 5);
