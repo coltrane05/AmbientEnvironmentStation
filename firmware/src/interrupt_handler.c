@@ -1,0 +1,30 @@
+#include <stdint.h>
+#include "interrupt_handler.h"
+#include "register_macros.h"
+#include "gpio.h"
+#include "timx.h"
+#include "led_state_machine.h"
+#include "exti.h"
+
+// This variable is declared in main
+extern stateMachine_t stateMachine;
+
+// TIM2 interrupt handler. This will be called at every timer event
+void TIM2_IRQHandler(void) {
+    if (TIM2->SR & (1U << 0)) {
+        TIM2->SR = 0; // Clear the update interrupt flag
+        if (stateMachine.currState != ST_LED_OFF && stateMachine.currState != ST_LED_SOLID) {
+            TOGGLE_BIT(GPIOA->ODR, 5); // Toggle the LED on Port A pin 5
+        }
+    }
+}
+
+// EXTI15_10 interrupt handler. 
+// This will be called when a Falling edge on line 13 Port C is detected.
+void EXTI15_10_IRQHandler(void) {
+    if (GET_BIT(EXTI->PR, 13)) {
+        state_machine_run_iteration(&stateMachine, EV_BUTTON_PRESSED);
+        SET_BIT(TIM2->EGR, 0);
+        SET_BIT(EXTI->PR, 13); // For this register, you clear it by setting it to 1
+    }
+}
