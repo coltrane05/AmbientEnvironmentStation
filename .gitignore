@@ -12,3 +12,5 @@
 **/*.bin
 **/*.hex
 **/*.map
+
+/.vscode
