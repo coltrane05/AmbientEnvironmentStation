@@ -7,6 +7,7 @@
 #include "nvic.h"
 #include "exti.h"
 #include "syscfg.h"
+#include "usart.h"
 
 void setup(void) {
     // Enable Clock for periferals
@@ -14,6 +15,7 @@ void setup(void) {
     SET_BIT(RCC->AHB1ENR, 2); // GPIO Port C
     SET_BIT(RCC->APB1ENR, 0); // TIM2
     SET_BIT(RCC->APB2ENR, 14); // SYSCFG (Bit 14)
+    SET_BIT(RCC->APB1ENR, 17); // USART2 (Bit 17)
 
     //TIM2 setup
     TIM2->PSC = 15999; // Prescaler value. With 16MHz clock, this gives 1ms period
@@ -42,4 +44,18 @@ void setup(void) {
     // Set pin modes for Port A pin 5 and Port C pin 13
     SET_2BIT_FIELD(GPIOA->MODER, 5, 0b01); // Output Port A pin 5 User Led
     SET_2BIT_FIELD(GPIOC->MODER, 13, 0b00); // Input Port C pin 13 User Button
+    SET_2BIT_FIELD(GPIOA->MODER, 2, 0b10); // Alternate Function Port A pin 2 USART2_TX
+    SET_2BIT_FIELD(GPIOA->MODER, 3, 0b10); // Alternate Function Port A pin 3 USART2_RX
+
+    // Set alternate function for Port A pin 2 and pin 3 to AF7 (USART2)
+    GPIOA->AFRL &= ~(0xF << 8); // Clear AFRL for pin 2
+    GPIOA->AFRL |= (0x7 << 8); // Set AFRL for pin 2 to AF7 (USART2_TX)
+    GPIOA->AFRL &= ~(0xF << 12); // Clear AFRL for pin 3
+    GPIOA->AFRL |= (0x7 << 12); // Set AFRL for pin 3 to AF7 (USART2_RX)
+
+    // Setup USART2
+    USART2->BRR = 139U;
+    SET_BIT(USART2->CR1, 3);
+    SET_BIT(USART2->CR1, 2);
+    SET_BIT(USART2->CR1, 13);    
 }
