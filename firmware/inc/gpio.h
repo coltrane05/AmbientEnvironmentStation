@@ -5,6 +5,7 @@
 
 // Base addresses for GPIO ports. These are specific to the STM32F4 series microcontrollers.
 #define GPIOA_BASE 0x40020000UL
+#define GPIOB_BASE 0x40020400UL
 #define GPIOC_BASE 0x40020800UL
 
 // A structure to represent the GPIO registers.
@@ -23,6 +24,7 @@ typedef struct {
 
 // Define pointers to the GPIO structures for Port A and Port C.
 #define GPIOA ((Custom_GPIO_t *) GPIOA_BASE)
+#define GPIOB ((Custom_GPIO_t *) GPIOB_BASE)
 #define GPIOC ((Custom_GPIO_t *) GPIOC_BASE)
 
 #endif

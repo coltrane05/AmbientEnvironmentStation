@@ -6,9 +6,11 @@
 #include "led_state_machine.h"
 #include "exti.h"
 #include "usart.h"
+#include "i2c.h"
 
 // This variable is declared in main
 extern stateMachine_t stateMachine;
+extern unsigned int check_BME;
 
 // TIM2 interrupt handler. This will be called at every timer event
 void TIM2_IRQHandler(void) {
@@ -16,8 +18,9 @@ void TIM2_IRQHandler(void) {
         TIM2->SR = 0; // Clear the update interrupt flag
         if (stateMachine.currState != ST_LED_OFF && stateMachine.currState != ST_LED_SOLID) {
             TOGGLE_BIT(GPIOA->ODR, 5); // Toggle the LED on Port A pin 5
-            usart2_println("Hunter Sucks");
+            // usart2_println("Hunter Sucks");
         }
+        check_BME = 1;
     }
 }
 
