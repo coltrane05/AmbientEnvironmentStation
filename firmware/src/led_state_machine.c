@@ -2,6 +2,7 @@
 #include "gpio.h"
 #include "register_macros.h"
 #include "timx.h"
+#include "usart.h"
 
 // State transition matrix for the state machine.
 // Each row defines a transition from a current state to a next state based on an event.
@@ -65,6 +66,9 @@ void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event) {
                 stateMachine->currState = LEDStateTransMatrix[i].nextState;
 
                 (LEDStateFunctionArray[stateMachine->currState].func)();
+                usart2_print("Current State: ");
+                usart2_print(LEDStateFunctionArray[stateMachine->currState].name);
+                usart2_print("\r\n");
                 break;
             }
         }
@@ -73,6 +77,8 @@ void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event) {
 
 // Function to initialize the state machine. Sets the initial state and performs any necessary setup.
 void state_machine_init(stateMachine_t * stateMachine) {
-    stateMachine->currState = ST_LED_OFF;
+    stateMachine->currState = ST_INIT;
+    state_machine_run_iteration(stateMachine, EV_BUTTON_PRESSED);
+
     CLEAR_BIT(GPIOA->ODR, 5);
 }

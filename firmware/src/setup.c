@@ -25,8 +25,9 @@ void setup(void) {
     SET_BIT(TIM2->CR1, 0); // Enable Counter
 
     // Interrupt Setup
-    NVIC->ISER[0] = (1U << 28); // TIM2 Interrupt is (IRQ 28)
-    NVIC->ISER[1] = (1U << 8); // EXTI15_10 Interrupt is (IRQ 40)
+    NVIC->ISER[0] = (1U << 28); // TIM2 Interrupt (IRQ 28)
+    NVIC->ISER[1] = (1U << 8); // EXTI15_10 Interrupt (IRQ 40)
+    NVIC->ISER[1] = (1U << 6); // USART_2 Interrupt is (IRQ 38)
 
     // See page 59 of PM0214 for instructions related to CMSIS functions
     __asm("cpsie i"); // Enable global iterrupts

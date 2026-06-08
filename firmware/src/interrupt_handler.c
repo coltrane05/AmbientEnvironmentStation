@@ -5,6 +5,7 @@
 #include "timx.h"
 #include "led_state_machine.h"
 #include "exti.h"
+#include "usart.h"
 
 // This variable is declared in main
 extern stateMachine_t stateMachine;
@@ -15,6 +16,7 @@ void TIM2_IRQHandler(void) {
         TIM2->SR = 0; // Clear the update interrupt flag
         if (stateMachine.currState != ST_LED_OFF && stateMachine.currState != ST_LED_SOLID) {
             TOGGLE_BIT(GPIOA->ODR, 5); // Toggle the LED on Port A pin 5
+            usart2_println("Hunter Sucks");
         }
     }
 }
