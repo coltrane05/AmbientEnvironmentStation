@@ -10,7 +10,7 @@
 
 // This variable is declared in main
 extern stateMachine_t stateMachine;
-extern unsigned int check_BME;
+extern volatile unsigned int check_BME;
 
 // TIM2 interrupt handler. This will be called at every timer event
 void TIM2_IRQHandler(void) {
@@ -30,6 +30,6 @@ void EXTI15_10_IRQHandler(void) {
     if (GET_BIT(EXTI->PR, 13)) {
         state_machine_run_iteration(&stateMachine, EV_BUTTON_PRESSED);
         SET_BIT(TIM2->EGR, 0);
-        SET_BIT(EXTI->PR, 13); // For this register, you clear it by setting it to 1
+        EXTI->PR = (1U << 13); // Write 1 to clear. Do NOT use read-modify-write (|=) here!
     }
 }

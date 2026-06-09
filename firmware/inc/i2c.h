@@ -20,6 +20,8 @@ typedef struct {
 
 #define I2C1 ((Custom_I2C_t *) I2C1_BASE)
 
+void I2C1_master_write_register(uint8_t address, uint8_t reg, uint8_t data);
 void I2C1_master_receive(uint8_t address, uint8_t reg, uint8_t num_bytes, uint8_t * buffer);
+
 
 #endif
