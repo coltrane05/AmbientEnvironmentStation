@@ -15,9 +15,13 @@ int main(void) {
 
     // See page 59 of PM0214 for instructions related to CMSIS functions
     __asm("cpsie i"); // Enable global iterrupts
+
+    uint8_t i2c_chip_id_buffer[1];
+    uint8_t i2c_env_data_buffer[8];
     while(1) {
         if(check_BME == 1) {
-            I2C1_read(0x76, 0xD0);
+            I2C1_master_receive(0x76, 0xD0, 1, i2c_chip_id_buffer);
+            // I2C1_master_receive(0x76, 0xF7, 8, i2c_env_data_buffer);
             check_BME = 0;
         }
     }

@@ -14,7 +14,7 @@ void setup(void) {
     // Enable Clock for periferals
     SET_BIT(RCC->AHB1ENR, 0); // GPIO Port A (For LED and USART2)
     SET_BIT(RCC->AHB1ENR, 1); // GPIO Port B (For I2C2)
-    SET_BIT(RCC->AHB1ENR, 2); // GPIO Port C
+    SET_BIT(RCC->AHB1ENR, 2); // GPIO Port C (For User Button)
     SET_BIT(RCC->APB1ENR, 0); // TIM2
     SET_BIT(RCC->APB2ENR, 14); // SYSCFG (Bit 14)
     SET_BIT(RCC->APB1ENR, 17); // USART2 (Bit 17)
