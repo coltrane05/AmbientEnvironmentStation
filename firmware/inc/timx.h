@@ -34,6 +34,6 @@ typedef struct {
 // Define a pointer to the TIM2 structure for easy access to the TIM2 registers.
 #define TIM2 ((Custom_TIMx_t *) TIM2_BASE)
 
-
+void tim2_handle_interrupt(void);
 
 #endif

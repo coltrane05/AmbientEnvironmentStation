@@ -21,6 +21,9 @@
 #define BME280_PRES_DATA_START_REG 0xF7
 #define BME280_HUM_DATA_START_REG 0xFD
 
+void reset_check_BME(void);
+void set_check_BME(void);
+uint8_t get_check_BME(void);
 
 void get_bme_cal_data(void);
 

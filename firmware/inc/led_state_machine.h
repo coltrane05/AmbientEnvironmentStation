@@ -1,6 +1,8 @@
 #ifndef LED_STATE_MACHINE_H
 #define LED_STATE_MACHINE_H
 
+#include <stdbool.h>
+
 typedef enum {
     ST_INIT,
     ST_LED_OFF,
@@ -42,7 +44,8 @@ void led_medium(void);
 void led_fast(void);
 void led_solid(void);
 
-void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event);
-void state_machine_init(stateMachine_t *stateMachine);
+void state_machine_run_iteration(event_t event);
+bool state_machine_is_blinking(void);
+void state_machine_init();
 
 #endif

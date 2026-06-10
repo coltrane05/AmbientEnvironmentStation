@@ -19,4 +19,6 @@ typedef struct {
 // Define pointers to the EXTI structure.
 #define EXTI ((Custom_EXTI_t *) EXTI_BASE)
 
+void exti15_10_handle_interrupt(void);
+
 #endif

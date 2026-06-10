@@ -6,13 +6,10 @@
 #include "i2c.h"
 #include "bme280.h"
 
-stateMachine_t stateMachine;
-unsigned int check_BME = 0;
-
 int main(void) {
     setup();
     usart2_print("Booting...\r\n");
-    state_machine_init(&stateMachine); // Initialize state machine
+    state_machine_init(); // Initialize state machine
 
     // See page 59 of PM0214 for instructions related to CMSIS functions
     __asm("cpsie i"); // Enable global iterrupts
@@ -25,7 +22,7 @@ int main(void) {
     char* bme_data_string_buffer[3] = {pres_buffer, temp_buffer, hum_buffer};
 
     while(1) {
-        if(check_BME == 1) {
+        if(get_check_BME()) {
 
             get_bme_data(bme_data_string_buffer, 15);
 
@@ -41,7 +38,7 @@ int main(void) {
             usart2_print(bme_data_string_buffer[2]);
             usart2_println("%");
             usart2_println("");
-            check_BME = 0;
+            reset_check_BME();
         }
     }
     return 0;

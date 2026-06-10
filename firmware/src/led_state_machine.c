@@ -4,6 +4,8 @@
 #include "timx.h"
 #include "usart.h"
 
+stateMachine_t stateMachine;
+
 // State transition matrix for the state machine.
 // Each row defines a transition from a current state to a next state based on an event.
 static stateTransMatrixRow_t LEDStateTransMatrix[] = {
@@ -59,15 +61,15 @@ void led_solid(void) {
 }
 
 // Function to run one iteration of the state machine based on the current state and an event.
-void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event) {
+void state_machine_run_iteration(event_t event) {
     for (int i = 0; i < sizeof(LEDStateTransMatrix)/sizeof(LEDStateTransMatrix[0]); i++) {
-        if(LEDStateTransMatrix[i].currState == stateMachine->currState) {
+        if(LEDStateTransMatrix[i].currState == stateMachine.currState) {
             if((LEDStateTransMatrix[i].event == event )) {
-                stateMachine->currState = LEDStateTransMatrix[i].nextState;
+                stateMachine.currState = LEDStateTransMatrix[i].nextState;
 
-                (LEDStateFunctionArray[stateMachine->currState].func)();
+                (LEDStateFunctionArray[stateMachine.currState].func)();
                 usart2_print("Current State: ");
-                usart2_print(LEDStateFunctionArray[stateMachine->currState].name);
+                usart2_print(LEDStateFunctionArray[stateMachine.currState].name);
                 usart2_print("\r\n");
                 break;
             }
@@ -75,10 +77,16 @@ void state_machine_run_iteration(stateMachine_t *stateMachine, event_t event) {
     }
 }
 
+bool state_machine_is_blinking(void) {
+    if (stateMachine.currState != ST_LED_OFF && stateMachine.currState != ST_LED_SOLID) {
+            return true;
+        }
+}
+
 // Function to initialize the state machine. Sets the initial state and performs any necessary setup.
-void state_machine_init(stateMachine_t * stateMachine) {
-    stateMachine->currState = ST_INIT;
-    state_machine_run_iteration(stateMachine, EV_BUTTON_PRESSED);
+void state_machine_init() {
+    stateMachine.currState = ST_INIT;
+    state_machine_run_iteration(EV_BUTTON_PRESSED);
 
     CLEAR_BIT(GPIOA->ODR, 5);
 }

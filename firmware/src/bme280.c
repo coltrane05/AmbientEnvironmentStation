@@ -22,10 +22,24 @@ static int16_t dig_H4 = 0;
 static int16_t dig_H5 = 0;
 static int8_t dig_H6 = 0;
 
+static volatile uint8_t check_BME = 0;
+
 // static uint8_t temp_cal_buffer[6];
 // static uint8_t temp_data_buffer[3];
 
 static int32_t t_fine;
+
+void reset_check_BME(void) {
+    check_BME = 0;
+}
+
+void set_check_BME(void) {
+    check_BME = 1;
+}
+
+uint8_t get_check_BME(void) {
+    return check_BME;
+}
 
 // function to get the calibration data from the BME280
 void get_bme_cal_data(void) {
