@@ -33,3 +33,9 @@ void EXTI15_10_IRQHandler(void) {
         EXTI->PR = (1U << 13); // Write 1 to clear. Do NOT use read-modify-write (|=) here!
     }
 }
+
+void USART2_IRQHandler(void) {
+    if((USART2->SR & (1 << 7))) {
+        usart2_handle_interrupt();
+    }
+}

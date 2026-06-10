@@ -25,14 +25,12 @@ void usart2_println(const char * str) {
     usart2_print("\r\n");
 }
 
-void USART2_IRQHandler(void) {
-    if((USART2->SR & (1 << 7))) {
-        if (ring_buffer.head != ring_buffer.tail) {
-            USART2->DR = ring_buffer.data[ring_buffer.tail];
-            ring_buffer.tail = (ring_buffer.tail + 1) % RING_BUFFER_SIZE;
-        }
-        else {
-            USART2->CR1 &= ~(1 << 7);
-        }
+void usart2_handle_interrupt(void) {
+    if (ring_buffer.head != ring_buffer.tail) {
+        USART2->DR = ring_buffer.data[ring_buffer.tail];
+        ring_buffer.tail = (ring_buffer.tail + 1) % RING_BUFFER_SIZE;
+    }
+    else {
+        USART2->CR1 &= ~(1 << 7);
     }
 }

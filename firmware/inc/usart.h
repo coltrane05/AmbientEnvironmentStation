@@ -28,5 +28,6 @@ typedef struct {
 void usart2_print(const char * str);
 void usart2_println(const char * str);
 void usart2_write(char ch);
+void usart2_handle_interrupt(void);
 
 #endif
