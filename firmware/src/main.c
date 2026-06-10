@@ -19,31 +19,28 @@ int main(void) {
 
     bme280_init();
 
+    char pres_buffer[15];
+    char temp_buffer[15];
+    char hum_buffer[15];
+    char* bme_data_string_buffer[3] = {pres_buffer, temp_buffer, hum_buffer};
+
     while(1) {
         if(check_BME == 1) {
-            int32_t temp_c = calculate_bme_temp();
-            uint32_t pres = calculate_bme_pres();
-            int32_t temp_f = convert_celsius_to_fahrenheit(temp_c);
 
-
-            char temp_c_string[15];
-            char temp_f_string[15];
-            char pres_string[15];
-            format_temp_string(temp_c, temp_c_string, sizeof(temp_c_string));
-            format_temp_string(temp_f, temp_f_string, sizeof(temp_f_string));
-            format_pres_string(pres, pres_string, sizeof(pres_string));
-
-            usart2_print("Celsius: ");
-            usart2_print(temp_c_string);
-            usart2_println(" C");
-            
-            usart2_print("Fahrenheit: ");
-            usart2_print(temp_f_string);
-            usart2_println(" F");
+            get_bme_data(bme_data_string_buffer, 15);
 
             usart2_print("Pressure: ");
-            usart2_print(pres_string);
+            usart2_print(bme_data_string_buffer[0]);
             usart2_println(" hPa");
+
+            usart2_print("Temperature: ");
+            usart2_print(bme_data_string_buffer[1]);
+            usart2_println(" F");
+            
+            usart2_print("Humidity: ");
+            usart2_print(bme_data_string_buffer[2]);
+            usart2_println("%");
+            usart2_println("");
             check_BME = 0;
         }
     }
