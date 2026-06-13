@@ -9,7 +9,7 @@ typedef enum {
     ST_LED_SLOW,
     ST_LED_MEDIUM,
     ST_LED_FAST,
-    ST_LED_SOLID,
+    ST_LED_SOLID
 } state_t;
 
 // Event types for the state machine.

@@ -26,3 +26,11 @@ void USART2_IRQHandler(void) {
         usart2_handle_interrupt();
     }
 }
+
+void I2C1_EV_IRQHandler(void) {
+    I2C1_handle_interrupt();
+}
+
+void I2C1_ER_IRQHandler(void) {
+    I2C1_handle_error_interrupt();
+}

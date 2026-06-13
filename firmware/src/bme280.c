@@ -49,9 +49,13 @@ void get_bme_cal_data(void) {
     uint8_t hum_cal_buffer_2[7]; // Humidity calibration data part 2 is 7 bytes
 
     I2C1_master_receive(BME280_ADDR, BME280_TEMP_CAL_START_REG, 6, temp_cal_buffer);
+    while(I2C_read_is_busy());
     I2C1_master_receive(BME280_ADDR, BME280_PRES_CAL_START_REG, 18, pres_cal_buffer);
+    while(I2C_read_is_busy());
     I2C1_master_receive(BME280_ADDR, BME280_HUM_CAL_START_REG1, 1, hum_cal_buffer_1);
+    while(I2C_read_is_busy());
     I2C1_master_receive(BME280_ADDR, BME280_HUM_CAL_START_REG2, 7, hum_cal_buffer_2);
+    while(I2C_read_is_busy());
 
     dig_T1 = (uint16_t)((temp_cal_buffer[1] << 8) | temp_cal_buffer[0]); // BME structures their calibration data little endian
     dig_T2 = (int16_t)((temp_cal_buffer[3] << 8) | temp_cal_buffer[2]);
@@ -263,6 +267,7 @@ void format_hum_string(uint32_t hum, char* buffer, uint32_t max_len) {
 void get_bme_data(char** string_buffers, uint32_t max_len) {
     uint8_t data_buffer[8]; // sensor data is stored accrosss 8 bytes
     I2C1_master_receive(BME280_ADDR, BME280_DATA_START_REG, 8, data_buffer);
+    while(I2C_read_is_busy());
 
     int32_t adc_P = ((uint32_t)data_buffer[0] << 12) |
                     ((uint32_t)data_buffer[1] << 4)  |

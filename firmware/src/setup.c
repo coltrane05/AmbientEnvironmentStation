@@ -30,7 +30,10 @@ void setup(void) {
     // Interrupt Setup
     NVIC->ISER[0] = (1U << 28); // TIM2 Interrupt (IRQ 28)
     NVIC->ISER[1] = (1U << 8); // EXTI15_10 Interrupt (IRQ 40)
-    NVIC->ISER[1] = (1U << 6); // USART_2 Interrupt is (IRQ 38)
+    NVIC->ISER[1] = (1U << 6); // USART2 Interrupt (IRQ 38)
+    NVIC->ISER[0] = (1U << 31); // I2C1_EV Interrupt (IRQ 31)
+    NVIC->ISER[1] = (1U << 0); // I2C1_ER Interrupt (IRQ 32)
+
 
     // System Config for external interrupt on line 13 Port C
     SYSCFG->EXTICR4 &= ~(0xF << 4); // Clear EXTI13 (4 bits starting at bit 4 on EXTICR4)

@@ -80,7 +80,10 @@ void state_machine_run_iteration(event_t event) {
 bool state_machine_is_blinking(void) {
     if (stateMachine.currState != ST_LED_OFF && stateMachine.currState != ST_LED_SOLID) {
             return true;
-        }
+    }
+    else {
+        return false;
+    }
 }
 
 // Function to initialize the state machine. Sets the initial state and performs any necessary setup.
