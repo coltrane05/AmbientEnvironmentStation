@@ -28,11 +28,11 @@ void setup(void) {
     SET_BIT(TIM2->CR1, 0); // Enable Counter
 
     // Interrupt Setup
-    NVIC->ISER[0] = (1U << 28); // TIM2 Interrupt (IRQ 28)
-    NVIC->ISER[1] = (1U << 8); // EXTI15_10 Interrupt (IRQ 40)
-    NVIC->ISER[1] = (1U << 6); // USART2 Interrupt (IRQ 38)
-    NVIC->ISER[0] = (1U << 31); // I2C1_EV Interrupt (IRQ 31)
-    NVIC->ISER[1] = (1U << 0); // I2C1_ER Interrupt (IRQ 32)
+    NVIC->ISER[0] |= (1U << 28); // TIM2 Interrupt (IRQ 28)
+    NVIC->ISER[1] |= (1U << 8); // EXTI15_10 Interrupt (IRQ 40)
+    NVIC->ISER[1] |= (1U << 6); // USART2 Interrupt (IRQ 38)
+    NVIC->ISER[0] |= (1U << 31); // I2C1_EV Interrupt (IRQ 31)
+    NVIC->ISER[1] |= (1U << 0); // I2C1_ER Interrupt (IRQ 32)
 
 
     // System Config for external interrupt on line 13 Port C
@@ -72,6 +72,7 @@ void setup(void) {
     USART2->BRR = 139U;
     SET_BIT(USART2->CR1, 3);
     SET_BIT(USART2->CR1, 2);
+    SET_BIT(USART2->CR1, 5);
     SET_BIT(USART2->CR1, 13);
     
     // Setup I2C2

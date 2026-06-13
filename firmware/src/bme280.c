@@ -1,5 +1,7 @@
 #include "bme280.h"
 #include "i2c.h"
+#include "usart.h"
+#include <stddef.h>
 
 static uint16_t dig_T1 = 0;
 static int16_t dig_T2 = 0;
@@ -23,6 +25,9 @@ static int16_t dig_H5 = 0;
 static int8_t dig_H6 = 0;
 
 static volatile uint8_t check_BME = 0;
+
+static uint8_t background_data_buffer[8];
+volatile bool bme_data_ready = false;
 
 // static uint8_t temp_cal_buffer[6];
 // static uint8_t temp_data_buffer[3];
@@ -48,13 +53,13 @@ void get_bme_cal_data(void) {
     uint8_t hum_cal_buffer_1[1]; // Humidity calibration data part 1 is 1 byte
     uint8_t hum_cal_buffer_2[7]; // Humidity calibration data part 2 is 7 bytes
 
-    I2C1_master_receive(BME280_ADDR, BME280_TEMP_CAL_START_REG, 6, temp_cal_buffer);
+    I2C1_master_receive(BME280_ADDR, BME280_TEMP_CAL_START_REG, 6, temp_cal_buffer, NULL);
     while(I2C_read_is_busy());
-    I2C1_master_receive(BME280_ADDR, BME280_PRES_CAL_START_REG, 18, pres_cal_buffer);
+    I2C1_master_receive(BME280_ADDR, BME280_PRES_CAL_START_REG, 18, pres_cal_buffer, NULL);
     while(I2C_read_is_busy());
-    I2C1_master_receive(BME280_ADDR, BME280_HUM_CAL_START_REG1, 1, hum_cal_buffer_1);
+    I2C1_master_receive(BME280_ADDR, BME280_HUM_CAL_START_REG1, 1, hum_cal_buffer_1, NULL);
     while(I2C_read_is_busy());
-    I2C1_master_receive(BME280_ADDR, BME280_HUM_CAL_START_REG2, 7, hum_cal_buffer_2);
+    I2C1_master_receive(BME280_ADDR, BME280_HUM_CAL_START_REG2, 7, hum_cal_buffer_2, NULL);
     while(I2C_read_is_busy());
 
     dig_T1 = (uint16_t)((temp_cal_buffer[1] << 8) | temp_cal_buffer[0]); // BME structures their calibration data little endian
@@ -264,28 +269,55 @@ void format_hum_string(uint32_t hum, char* buffer, uint32_t max_len) {
     buffer[buff_idx] = '\0';
 }
 
-void get_bme_data(char** string_buffers, uint32_t max_len) {
-    uint8_t data_buffer[8]; // sensor data is stored accrosss 8 bytes
-    I2C1_master_receive(BME280_ADDR, BME280_DATA_START_REG, 8, data_buffer);
-    while(I2C_read_is_busy());
+void bme_data_ready_callback(void) {
+    bme_data_ready = true;
+}
 
-    int32_t adc_P = ((uint32_t)data_buffer[0] << 12) |
-                    ((uint32_t)data_buffer[1] << 4)  |
-                    (data_buffer[2] >> 4);
+bool get_bme_data_ready(void) {
+    return bme_data_ready;
+}
 
-    int32_t adc_T = ((uint32_t)data_buffer[3] << 12) |
-                    ((uint32_t)data_buffer[4] << 4)  |
-                    (data_buffer[5] >> 4);
+void process_and_print_bme_data(void) {
+    int32_t adc_P = ((uint32_t)background_data_buffer[0] << 12) |
+                    ((uint32_t)background_data_buffer[1] << 4)  |
+                    (background_data_buffer[2] >> 4);
 
-    int32_t adc_H = ((uint32_t)data_buffer[6] << 8) |
-                    ((uint32_t)data_buffer[7]);
+    int32_t adc_T = ((uint32_t)background_data_buffer[3] << 12) |
+                    ((uint32_t)background_data_buffer[4] << 4)  |
+                    (background_data_buffer[5] >> 4);
+
+    int32_t adc_H = ((uint32_t)background_data_buffer[6] << 8) |
+                    ((uint32_t)background_data_buffer[7]);
 
     int32_t T = convert_celsius_to_fahrenheit(calculate_bme_temp(adc_T));
     uint32_t P = calculate_bme_pres(adc_P);
     uint32_t H = calculate_bme_hum(adc_H);
 
+    char pres_buffer[15];
+    char temp_buffer[15];
+    char hum_buffer[15];
 
-    format_pres_string(P, string_buffers[0], max_len);
-    format_temp_string(T, string_buffers[1], max_len);
-    format_hum_string(H, string_buffers[2], max_len);
+    uint32_t max_len = 15;
+
+    format_pres_string(P, pres_buffer, max_len);
+    format_temp_string(T, temp_buffer, max_len);
+    format_hum_string(H, hum_buffer, max_len);
+
+    usart2_print("Pressure: ");
+    usart2_print(pres_buffer);
+    usart2_println(" hPa");
+
+    usart2_print("Temperature: ");
+    usart2_print(temp_buffer);
+    usart2_println(" F");
+    
+    usart2_print("Humidity: ");
+    usart2_print(hum_buffer);
+    usart2_println("%");
+    usart2_println("");
+    bme_data_ready = false;
+}
+
+void start_bme_data_collection(void) {
+    I2C1_master_receive(BME280_ADDR, BME280_DATA_START_REG, 8, background_data_buffer, bme_data_ready_callback);
 }

@@ -39,10 +39,11 @@ typedef struct{
     uint32_t num_bytes;
     uint8_t* buffer;
     uint32_t num_bytes_to_read;
+    void (*callback)(void);
 } I2C_read_stateMachine_t;
 
 void I2C1_master_write_register(uint8_t address, uint8_t reg, uint8_t data);
-void I2C1_master_receive(uint8_t address, uint8_t reg, uint8_t num_bytes, uint8_t * buffer);
+void I2C1_master_receive(uint8_t address, uint8_t reg, uint8_t num_bytes, uint8_t * buffer, void (*callback)(void));
 void I2C1_handle_interrupt(void);
 void I2C1_handle_error_interrupt(void);
 bool I2C_read_is_busy(void);

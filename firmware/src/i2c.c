@@ -120,15 +120,17 @@ void I2C_read_state_machine_reset(void) {
     I2C_read_state_machine.num_bytes_to_read = 0;
     I2C_read_state_machine.reg = 0x00;
     I2C_read_state_machine.currState = IDLE;
+    I2C_read_state_machine.callback = NULL;
 }
 
-void I2C1_master_receive(uint8_t address, uint8_t reg, uint8_t num_bytes, uint8_t * buffer) {
+void I2C1_master_receive(uint8_t address, uint8_t reg, uint8_t num_bytes, uint8_t * buffer, void (*callback)(void)) {
     I2C_read_state_machine.address = address;
     I2C_read_state_machine.reg = reg;
     I2C_read_state_machine.num_bytes = num_bytes;
     I2C_read_state_machine.num_bytes_to_read = num_bytes;
     I2C_read_state_machine.buffer = buffer;
     I2C_read_state_machine.currState = SEND_ADDR_WRITE;
+    I2C_read_state_machine.callback = callback;
     
     SET_BIT(I2C1->CR2, 9); // Enable event interrupt
     SET_BIT(I2C1->CR2, 8); // Enable error interrupt
@@ -177,10 +179,14 @@ void I2C1_handle_interrupt(void) {
             if (I2C1->SR1 & (1 << 1) || I2C1->SR1 & (1 << 6)) {
                 burst_read();
                 if (I2C_read_state_machine.num_bytes_to_read == 0) {
+                    void (*cb)(void) = I2C_read_state_machine.callback;
                     I2C_read_state_machine.currState = IDLE;
                     CLEAR_BIT(I2C1->CR2, 9); // Disable event interrupt
                     CLEAR_BIT(I2C1->CR2, 10); // Disable buffer interrupt
                     CLEAR_BIT(I2C1->CR2, 8); // Disable error interrupt
+                    if (cb != NULL) {
+                        cb();
+                    }
                 }
             }
             break;
@@ -193,10 +199,14 @@ void I2C1_handle_interrupt(void) {
         case SINGLE_READ:
             if (I2C1->SR1 & (1 << 6)) {
                 single_read();
+                void (*cb)(void) = I2C_read_state_machine.callback;
                 I2C_read_state_machine.currState = IDLE;
                 CLEAR_BIT(I2C1->CR2, 9); // Disable event interrupt
                 CLEAR_BIT(I2C1->CR2, 10); // Disable buffer interrupt
                 CLEAR_BIT(I2C1->CR2, 8); // Disable error interrupt
+                if (cb != NULL) {
+                    cb();
+                }
             }
             break;
         default:

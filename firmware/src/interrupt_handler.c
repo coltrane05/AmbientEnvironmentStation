@@ -22,9 +22,7 @@ void EXTI15_10_IRQHandler(void) {
 }
 
 void USART2_IRQHandler(void) {
-    if((USART2->SR & (1 << 7))) {
         usart2_handle_interrupt();
-    }
 }
 
 void I2C1_EV_IRQHandler(void) {

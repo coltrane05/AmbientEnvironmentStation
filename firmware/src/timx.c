@@ -12,6 +12,5 @@ void tim2_handle_interrupt(void) {
             TOGGLE_BIT(GPIOA->ODR, 5); // Toggle the LED on Port A pin 5
             // usart2_println("Hunter Sucks");
         }
-        set_check_BME();
     }
 }

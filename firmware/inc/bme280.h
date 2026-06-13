@@ -2,6 +2,7 @@
 #define BME280_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define BME280_ADDR 0x76 
 
@@ -30,6 +31,10 @@ void get_bme_cal_data(void);
 void bme280_init(void);
 
 void get_bme_data(char** string_buffers, uint32_t max_len);
+void start_bme_data_collection(void);
+
+bool get_bme_data_ready(void);
+void process_and_print_bme_data(void);
 
 void format_temp_string(int32_t temp, char* buffer, uint32_t max_len);
 void format_pres_string(uint32_t pres, char* buffer, uint32_t max_len);
