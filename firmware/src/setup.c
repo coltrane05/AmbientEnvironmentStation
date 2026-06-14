@@ -21,7 +21,7 @@ void setup(void) {
     SET_BIT(RCC->APB1ENR, 21); // I2C1 (Bit 21)
 
     //TIM2 setup
-    TIM2->PSC = 15999; // Prescaler value. With 16MHz clock, this gives 1ms period
+    TIM2->PSC = (SYSTEM_CLOCK / 1000) - 1; // Prescaler value. With 16MHz clock, this gives 1ms period
     SET_BIT(TIM2->DIER, 0); // Enable Update Interrupt
     SET_BIT(TIM2->EGR, 0); // Generate an update event to load the prescaler value immediately
     TIM2->SR = 0; // Clear pending interrupt

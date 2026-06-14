@@ -7,7 +7,8 @@
 #define SYSGFG_BASE 0x40013800UL
 
 // A structure to represent SYSGFG registers 
-typedef struct {
+typedef struct 
+{
     volatile uint32_t MEMRMP;
     volatile uint32_t PMC;
     volatile uint32_t EXTICR1;

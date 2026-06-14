@@ -9,7 +9,8 @@
 
 // A structure to represent the NVIC registers. 
 // This structure is based on the ARM Cortex-M4 NVIC.
-typedef struct {
+typedef struct
+{
     volatile uint32_t ISER[8];
     uint32_t RESERVED0[24];
     volatile uint32_t ICER[8]; // Interrupt Clear-Enable Registers
