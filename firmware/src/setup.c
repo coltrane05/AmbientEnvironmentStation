@@ -21,11 +21,11 @@ void setup(void) {
     SET_BIT(RCC->APB1ENR, 21); // I2C1 (Bit 21)
 
     //TIM2 setup
-    TIM2->PSC = (SYSTEM_CLOCK / 1000) - 1; // Prescaler value. With 16MHz clock, this gives 1ms period
-    SET_BIT(TIM2->DIER, 0); // Enable Update Interrupt
-    SET_BIT(TIM2->EGR, 0); // Generate an update event to load the prescaler value immediately
-    TIM2->SR = 0; // Clear pending interrupt
-    SET_BIT(TIM2->CR1, 0); // Enable Counter
+    // TIM2->PSC = (SYSTEM_CLOCK / 1000) - 1; // Prescaler value. With 16MHz clock, this gives 1ms period
+    // SET_BIT(TIM2->DIER, 0); // Enable Update Interrupt
+    // SET_BIT(TIM2->EGR, 0); // Generate an update event to load the prescaler value immediately
+    // TIM2->SR = 0; // Clear pending interrupt
+    // SET_BIT(TIM2->CR1, 0); // Enable Counter
 
     // Interrupt Setup
     NVIC->ISER[0] |= (1U << 28); // TIM2 Interrupt (IRQ 28)
@@ -46,7 +46,7 @@ void setup(void) {
                              // there is a falling edge.
 
     // Set GPIO pin modes
-    SET_2BIT_FIELD(GPIOA->MODER, 5, 0b01); // Output Port A pin 5 User Led
+    // SET_2BIT_FIELD(GPIOA->MODER, 5, 0b01); // Output Port A pin 5 User Led
     SET_2BIT_FIELD(GPIOC->MODER, 13, 0b00); // Input Port C pin 13 User Button
     SET_2BIT_FIELD(GPIOA->MODER, 2, 0b10); // Alternate Function Port A pin 2 USART2_TX
     SET_2BIT_FIELD(GPIOA->MODER, 3, 0b10); // Alternate Function Port A pin 3 USART2_RX
@@ -57,7 +57,7 @@ void setup(void) {
     SET_BIT(GPIOB->OTYPER, 6); // Port B pin 6 output open drain (I2C1_SCL)
     SET_BIT(GPIOB->OTYPER, 7); // Port B pin 7 output open drain (I2C1_SDA)
 
-    // Set alternate function GPIO Pins (USART2 and I2C1)
+    // Set alternate function GPIO Pins
     GPIOA->AFRL &= ~(0xF << (2 * 4)); // Clear AFRL for Port A pin 2
     GPIOA->AFRL |= (0x7 << (2 * 4)); // Set AFRL for Port A pin 2 to AF7 (USART2_TX)
     GPIOA->AFRL &= ~(0xF << (3 * 4)); // Clear AFRL for Port A pin 3
@@ -67,6 +67,9 @@ void setup(void) {
     GPIOB->AFRL |= (0x4 << (6 * 4)); // Set AFRL for Port B pin 6 to AF4 (I2C1_SCL)
     GPIOB->AFRL &= ~(0xF << (7 * 4)); // Clear AFRL for Port B pin 7
     GPIOB->AFRL |= (0x4 << (7 * 4)); // Set AFRL for Port B pin 6 to AF4 (I2C1_SDA)
+
+    GPIOA->AFRL &= ~(0xF << (5 * 4)); // Clear AFRL for Port A pin 5
+    GPIOA->AFRL |= (0x1 << (5 * 4)); // Set AFRL for Port A pin 5 to AF1 (TIM2_CH1)
 
     // Setup USART2
     USART2->BRR = 139U;

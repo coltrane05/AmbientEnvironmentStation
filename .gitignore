@@ -13,4 +13,6 @@
 **/*.hex
 **/*.map
 
+.continue/
+.editorconfig
 /.vscode

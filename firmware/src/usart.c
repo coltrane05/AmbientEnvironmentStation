@@ -2,6 +2,7 @@
 #include "register_macros.h"
 #include "led_state_machine.h"
 #include "bme280.h"
+#include "timx.h"
 #include <stdbool.h>
 
 
@@ -53,14 +54,29 @@ bool read_buffer_is_ready (void)
 }
 
 // Parses the accumulated read_buffer and triggers actions based on recognized commands.
-void print_read_buffer (void)
+void process_read_buffer (void)
 {
+    char first_three[4] = {
+        read_buffer.data[0], 
+        read_buffer.data[1], 
+        read_buffer.data[2],
+        '\0'
+    };
+
     usart2_println("");
     
     // Check for "read" command and trigger BME280 data collection
     if (strings_match(read_buffer.data, "read"))
     {
         set_check_BME();
+    }
+
+    if (strings_match(first_three, "pwm")) {
+        uint8_t first_digit = (uint8_t)read_buffer.data[4] - '0';
+        uint8_t second_digit = (uint8_t)read_buffer.data[5] - '0';
+        uint16_t duty_cycle = (first_digit * 10) + second_digit;
+        set_current_duty_cycle(duty_cycle);
+        set_pwm_duty_cycle(duty_cycle);
     }
 
     // Clear the buffer state for the next command
