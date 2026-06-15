@@ -44,7 +44,7 @@ void usart2_println (const char * str);
 
 // Receive buffer processing functions
 bool read_buffer_is_ready (void); 
-void print_read_buffer (void);
+void process_read_buffer (void);
 
 // Single character reception functions
 bool read_char_is_ready (void);

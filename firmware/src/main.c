@@ -6,10 +6,13 @@
 #include "i2c.h"
 #include "bme280.h"
 #include "systick.h"
+#include "timx.h"
  
 int main(void) {
     setup();
     systick_init(SYSTEM_CLOCK);
+    tim2_standard_init();
+
     usart2_print("Booting...\r\n");
     state_machine_init();
      // Initialize led state machine
@@ -39,13 +42,26 @@ int main(void) {
 
         if (read_buffer_is_ready()) 
         {
-            print_read_buffer();
+            process_read_buffer();
         }
 
-        if (millis() == 5000) 
+        if (state_machine_is_dimming() && (millis() - get_previous_systick_count() >= 50)) 
         {
-            usart2_println("Welcome to 5 seconds you fool");
+            if (get_current_duty_cycle() == 100 || get_current_duty_cycle() == 0) {
+                flip_led_breathing_direction();
+            }
+
+            uint16_t new_duty_cycle = get_current_duty_cycle() + get_led_breathing_direction();
+            set_pwm_duty_cycle(new_duty_cycle);
+            set_current_duty_cycle(new_duty_cycle);
+
+            set_previous_systick_count(millis());
         }
+
+        // if (millis() == 5000) 
+        // {
+        //     usart2_println("Welcome to 5 seconds you fool");
+        // }
     }
     return 0;
 }
