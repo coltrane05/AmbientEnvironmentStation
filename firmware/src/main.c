@@ -7,11 +7,14 @@
 #include "bme280.h"
 #include "systick.h"
 #include "timx.h"
+#include "spi.h"
+#include "ili9341.h"
  
 int main(void) {
     setup();
     systick_init(SYSTEM_CLOCK);
     tim2_standard_init();
+    spi2_init();
 
     usart2_print("Booting...\r\n");
     state_machine_init();
@@ -21,6 +24,13 @@ int main(void) {
     __asm("cpsie i"); // Enable global iterrupts
 
     bme280_init();
+    ili9341_reset();
+    ili9341_init();
+
+    // ili9341_draw_pixel(120, 160, 0xF800);
+
+    ili9341_fill_screen(0xF800);
+
 
     while(1) 
     {
@@ -60,7 +70,8 @@ int main(void) {
 
         // if (millis() == 5000) 
         // {
-        //     usart2_println("Welcome to 5 seconds you fool");
+        //     ili9341_reset();
+        //     ili9341_init();
         // }
     }
     return 0;

@@ -17,6 +17,11 @@ uint32_t millis(void)
     return systick_counter;
 }
 
+void delay(uint32_t ms) {
+    uint32_t start_count = systick_counter;
+    while (systick_counter < (start_count + ms));
+}
+
 // Gets called in Systic_Handler()
 void systick_handle_interrupt(void)
 {
