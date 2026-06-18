@@ -9,6 +9,8 @@
 #include "timx.h"
 #include "spi.h"
 #include "ili9341.h"
+#include "fahrenheit.h"
+#include "pressure.h"
  
 int main(void) {
     setup();
@@ -29,8 +31,9 @@ int main(void) {
 
     // ili9341_draw_pixel(120, 160, 0xF800);
 
-    ili9341_fill_screen(0xF800);
+    // const ili9341_colors colors = ILI9341_COLORS;
 
+    uint8_t inc = 0;
 
     while(1) 
     {
@@ -38,6 +41,25 @@ int main(void) {
         {
             start_bme_data_collection();
             reset_check_BME();
+        }
+
+        if (color_change_is_ready())
+        {
+            if (inc == 0) 
+            {
+                ili9341_fill_screen(0x0000);
+                inc = 1;
+            }
+            else if (inc == 1) 
+            {
+                ili9341_draw_icon(fahrenheit, FAHRENHEIT_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
+                inc = 2;
+            }
+            else {
+                ili9341_draw_icon(pressure, PRESSURE_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
+                inc = 1;
+            }
+            reset_color_change_ready();
         }
 
         if (get_bme_data_ready()) 

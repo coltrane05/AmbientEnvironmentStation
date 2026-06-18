@@ -35,4 +35,6 @@ typedef struct {
 // Define a pointer to the RCC structure for easy access to the RCC registers.
 #define RCC ((Custom_RCC_t *) RCC_BASE)
 
+void rcc_init (void);
+
 #endif

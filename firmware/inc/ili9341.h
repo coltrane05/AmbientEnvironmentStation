@@ -2,12 +2,26 @@
 #define ILI9341_H
 
 #include <stdint.h>
+#include <stdbool.h>
+
+#define ILI9341_COLORS {.RED = 0xF800, .GREEN = 0x07E0, .BLUE = 0x001F}
+
+const typedef struct 
+{
+    const uint16_t RED;
+    const uint16_t GREEN;
+    const uint16_t BLUE;
+} ili9341_colors;
 
 void ili9341_init (void);
 void ili9341_send_command (uint8_t command);
-void ili9341_send_data (uint8_t * data_buffer, uint32_t buffer_size);
+void ili9341_send_data (const uint8_t * data_buffer, uint32_t buffer_size);
 void ili9341_reset (void);
 void ili9341_set_address_window (uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 void ili9341_draw_pixel (uint16_t x, uint16_t y, uint16_t color);
 void ili9341_fill_screen (uint16_t color);
+bool color_change_is_ready (void);
+void set_color_change_ready (void);
+void reset_color_change_ready (void);
+void ili9341_draw_icon (const uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height);
 #endif

@@ -3,6 +3,8 @@
 #include "spi.h"
 #include "systick.h"
 
+bool color_change_ready = false;
+
 static const uint8_t ili9341_init_sequence[] = {
     0x01, 0xFF, 150, // Software Reset
 
@@ -15,28 +17,28 @@ static const uint8_t ili9341_init_sequence[] = {
     0xF7, 1, 0x20,
 
     // Power Control 1 and 2
-    0xC0, 1, 0x23,
-    0xC1, 1, 0x10,
+    0xC0, 1, 0x2F,
+    0xC1, 1, 0x14,
 
     // VCOM Control 1 and 2
     0xC5, 2, 0x3E, 0x28,
-    0xC7, 1, 0x86,
+    0xC7, 1, 0x7C,
 
     // Memory Access Control (MADCTL) - Orientation and Color Order
-    0x36, 1, 0x48,
+    0x36, 1, 0xE8,
 
     // Pixel Format Set - 16-bit RGB565
     0x3A, 1, 0x55,
 
     // Frame Rate and Display Function Control
-    0xB1, 2, 0x00, 0x18,
+    0xB1, 2, 0x00, 0x10,
     0xB6, 3, 0x08, 0x82, 0x27,
     0xF2, 1, 0x00,
-    0x26, 1, 0x01,
+    0x26, 1, 0x04,
 
-    // Positive Gamma Correction
+    // Positive Gamma Correction (Adafruit standard)
     0xE0, 15, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00,
-    // Negative Gamma Correction
+    // Negative Gamma Correction (Adafruit standard)
     0xE1, 15, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F,
 
     //Sleep Out
@@ -89,7 +91,7 @@ void ili9341_send_command(uint8_t command)
     GPIOB->ODR &= ~(1 << 10); // DC pin low for command
     spi2_write(&command, 1);
 }
-void ili9341_send_data(uint8_t * data_buffer, uint32_t buffer_size)
+void ili9341_send_data(const uint8_t * data_buffer, uint32_t buffer_size)
 {
     GPIOB->ODR |= (1 << 10); // DC pin high   
     spi2_write(data_buffer, buffer_size);
@@ -138,15 +140,37 @@ void ili9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 }
 
 void ili9341_fill_screen(uint16_t color) {
-    ili9341_set_address_window(0, 0, 239, 319);
+    ili9341_set_address_window(0, 0, 319, 239);
     ili9341_send_command(0x2C);
 
-    uint8_t color_upper = (color >> 8);
-    uint8_t color_lower = (uint8_t)(color & 0x00FF);
-    for (uint32_t i = 0; i < (76800 * 2); i = i + 2) {
-        ili9341_send_data(&color_upper, 1);
-        ili9341_send_data(&color_lower, 1);
-    }
+    GPIOB->ODR |= (1 << 10); // DC pin HIGH for data
+    spi2_dma_write_no_increment(&color, (240 * 320));
 }
 
+void ili9341_draw_icon(const uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height) {
+    uint16_t x2 = x + width - 1;
+    uint16_t y2 = y + height - 1;
+    ili9341_set_address_window(x, y, x2, y2);
+
+    ili9341_send_command(0x2C);
+
+    GPIOB->ODR |= (1 << 10); // DC pin HIGH for data
+    // icon_buffer_size is the number of 16-bit pixels, not bytes
+    spi2_dma_write16(icon, icon_buffer_size);
+}
+
+
+bool color_change_is_ready(void)
+{
+    return color_change_ready;
+}
+
+void set_color_change_ready (void)
+{
+    color_change_ready = true;
+}
+void reset_color_change_ready (void)
+{
+    color_change_ready = false;
+}
   

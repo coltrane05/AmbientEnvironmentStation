@@ -3,6 +3,7 @@
 #include "led_state_machine.h"
 #include "bme280.h"
 #include "timx.h"
+#include "ili9341.h"
 #include <stdbool.h>
 
 
@@ -64,7 +65,9 @@ void process_read_buffer (void)
     };
 
     usart2_println("");
-    
+
+    set_color_change_ready();
+
     // Check for "read" command and trigger BME280 data collection
     if (strings_match(read_buffer.data, "read"))
     {

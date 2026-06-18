@@ -11,15 +11,25 @@
 #include "i2c.h"
 
 void setup(void) {
+    // Initialize system clock to 84MHz
+    rcc_init();
+
     // Enable Clock for periferals
     SET_BIT(RCC->AHB1ENR, 0); // GPIO Port A (For LED and USART2)
     SET_BIT(RCC->AHB1ENR, 1); // GPIO Port B (For I2C2)
     SET_BIT(RCC->AHB1ENR, 2); // GPIO Port C (For User Button)
     SET_BIT(RCC->APB1ENR, 0); // TIM2
+    SET_BIT(RCC->APB1ENR, 14); // SPI2
     SET_BIT(RCC->APB2ENR, 14); // SYSCFG (Bit 14)
     SET_BIT(RCC->APB1ENR, 17); // USART2 (Bit 17)
     SET_BIT(RCC->APB1ENR, 21); // I2C1 (Bit 21)
+    SET_BIT(RCC->AHB1ENR, 21); // DMA1
 
+    // Dummy reads to ensure clocks are enabled before peripheral access
+    (void)RCC->AHB1ENR;
+    (void)RCC->APB1ENR;
+    (void)RCC->APB2ENR;
+    
     //TIM2 setup
     // TIM2->PSC = (SYSTEM_CLOCK / 1000) - 1; // Prescaler value. With 16MHz clock, this gives 1ms period
     // SET_BIT(TIM2->DIER, 0); // Enable Update Interrupt
@@ -72,17 +82,17 @@ void setup(void) {
     GPIOA->AFRL |= (0x1 << (5 * 4)); // Set AFRL for Port A pin 5 to AF1 (TIM2_CH1)
 
     // Setup USART2
-    USART2->BRR = 139U;
+    USART2->BRR = 365U; // 42MHz APB1 clock / 115200 baud rate ~ 365
     SET_BIT(USART2->CR1, 3);
     SET_BIT(USART2->CR1, 2);
     SET_BIT(USART2->CR1, 5);
     SET_BIT(USART2->CR1, 13);
     
-    // Setup I2C2
+    // Setup I2C1
     I2C1->CR2 &= ~0x3F; // Clear FREQ field
-    I2C1->CR2 |= 0x10; // Set Freq field to 16 (MHz)
-    I2C1->CCR = 0x50; // Set Clock Control to run at 100kHz
-    I2C1->TRISE = 0x11; // Set TRISE Value to 17 (16 + 1)
+    I2C1->CR2 |= 42;    // Set Freq field to 42 (MHz) for APB1
+    I2C1->CCR = 210;    // Set Clock Control to run at 100kHz (42MHz / (2 * 100kHz))
+    I2C1->TRISE = 43;   // Set TRISE Value to 43 (42 + 1)
     SET_BIT(I2C1->CR1, 0); // Enable I2C1 Peripheral
 
 }

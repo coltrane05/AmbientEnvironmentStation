@@ -1,6 +1,6 @@
 #include "systick.h"
 
-static uint32_t systick_counter = 0;
+static volatile uint32_t systick_counter = 0;
 
 void systick_init(const uint32_t system_clock)
 {

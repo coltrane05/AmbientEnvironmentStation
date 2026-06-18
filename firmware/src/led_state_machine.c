@@ -52,21 +52,21 @@ void led_off(void)
 
 void led_slow(void)
 {
-    TIM2->ARR = 1499;
+    TIM2->ARR = 14999;
     SET_BIT(TIM2->EGR, 0);
     CLEAR_BIT(GPIOA->ODR, 5);
 }
 
 void led_medium(void)
 {
-    TIM2->ARR = 749;
+    TIM2->ARR = 7499;
     SET_BIT(TIM2->EGR, 0);
     CLEAR_BIT(GPIOA->ODR, 5);
 }
 
 void led_fast(void)
 {
-    TIM2->ARR = 249;
+    TIM2->ARR = 2499;
     SET_BIT(TIM2->EGR, 0);
     CLEAR_BIT(GPIOA->ODR, 5);
 }
@@ -104,7 +104,7 @@ void state_machine_run_iteration (led_event_t event)
 // Check if the led is in a blinking state
 bool state_machine_is_blinking (void)
 {
-    if (led_state_machine.currState != ST_LED_OFF && led_state_machine.currState != ST_LED_SOLID)
+    if (led_state_machine.currState != ST_LED_OFF && led_state_machine.currState != ST_LED_SOLID && led_state_machine.currState != ST_LED_DIMMER)
     {
             return true;
     }

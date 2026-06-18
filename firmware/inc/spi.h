@@ -21,6 +21,9 @@ typedef struct
 #define SPI2 ((custom_spi_t *) SPI2_BASE)
 
 void spi2_init (void);
-void spi2_write (uint8_t * data_buffer, uint32_t buffer_size);
+void spi2_write (const uint8_t * data_buffer, uint32_t buffer_size);
+void spi2_dma_write16(const uint16_t * data_buffer, uint32_t buffer_size);
+void spi2_dma_write_no_increment(const uint16_t * data_buffer, uint32_t buffer_size);
+
 
 #endif
