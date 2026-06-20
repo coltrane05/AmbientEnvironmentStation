@@ -19,7 +19,7 @@ static bool strings_match (const char * s1, const char * s2);
 
 // Queues a null-terminated string into the transmission ring buffer 
 // and enables the Transmit Data Register Empty (TXE) interrupt.
-void usart2_print (const char * str)
+void usart2_print(const char * str)
 {
     while (*str)
     {
@@ -42,20 +42,20 @@ void usart2_print (const char * str)
 }
 
 // Convenience function to print a string followed by a carriage return and line feed.
-void usart2_println (const char * str)
+void usart2_println(const char * str)
 {
     usart2_print(str);
     usart2_print("\r\n");
 }
 
 // Returns true if a complete string has been received (terminated by \r or \n).
-bool read_buffer_is_ready (void)
+bool read_buffer_is_ready(void)
 {
     return read_buffer_ready;
 }
 
 // Parses the accumulated read_buffer and triggers actions based on recognized commands.
-void process_read_buffer (void)
+void process_read_buffer(void)
 {
     char first_three[4] = {
         read_buffer.data[0], 
@@ -74,7 +74,8 @@ void process_read_buffer (void)
         set_check_BME();
     }
 
-    if (strings_match(first_three, "pwm")) {
+    if (strings_match(first_three, "pwm")) 
+    {
         uint8_t first_digit = (uint8_t)read_buffer.data[4] - '0';
         uint8_t second_digit = (uint8_t)read_buffer.data[5] - '0';
         uint16_t duty_cycle = (first_digit * 10) + second_digit;
@@ -91,13 +92,13 @@ void process_read_buffer (void)
 }
 
 // Returns true if a single character was received but didn't complete a command yet.
-bool read_char_is_ready (void)
+bool read_char_is_ready(void)
 {
     return read_char_ready;
 }
 
 // Echoes a single received character back to the terminal (used for live typing feedback).
-void print_read_char (void)
+void print_read_char(void)
 {
     usart2_print(read_char);
     read_char_ready = false;
@@ -105,7 +106,7 @@ void print_read_char (void)
 
 // Main USART2 interrupt handler called by the NVIC.
 // Handles Transmit Data Register Empty (TXE) and Read Data Register Not Empty (RXNE) events.
-void usart2_handle_interrupt (void)
+void usart2_handle_interrupt(void)
 {
     // Check if the TXE (Transmit Data Register Empty) interrupt flag is set
     if (USART2->SR & (1 << 7))
@@ -127,6 +128,7 @@ void usart2_handle_interrupt (void)
     if (USART2->SR & (1 << 5))
     {
         read_char[0] = USART2->DR;
+
         if (read_char[0] == '\r' || read_char[0] == '\n')
         {
             CLEAR_BIT(USART2->CR1, 5); // Disable RXNE interrupt temporarily while processing
@@ -153,5 +155,6 @@ static bool strings_match (const char * s1, const char * s2)
         s1++;
         s2++;
     }
+    
     return *s1 == *s2;
 }

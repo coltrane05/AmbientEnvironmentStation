@@ -82,7 +82,8 @@ void spi2_dma_write16(const uint16_t * data_buffer, uint32_t buffer_size)
     DMA1->S4PAR = (uint32_t)&SPI2->DR; // Set DMA peripheral address
     DMA1->S4M0AR = (uint32_t)data_buffer;
 
-    if (buffer_size > 65535) {
+    if (buffer_size > 65535) 
+    {
         usart2_println("From DMA write16: BUFFER SIZE TOO LARGE");
         return;
     }
@@ -163,8 +164,6 @@ void spi2_dma_write_no_increment(const uint16_t * data_buffer, uint32_t buffer_s
 
     GPIOB->ODR |= (1 << 12); // Set CS high to end transaction
 
-    // Wait for SPI to be not busy before changing configuration
-    while((SPI2->SR & (1 << 7)));
     // Disable SPI to change data frame format
     SPI2->CR1 &= ~(1 << 6);
     // Set back to 8-bit mode

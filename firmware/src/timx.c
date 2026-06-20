@@ -6,10 +6,13 @@
 #include "setup.h"
 
 
-void tim2_handle_interrupt(void) {
-    if (TIM2->SR & (1U << 0)) {
+void tim2_handle_interrupt(void) 
+{
+    if (TIM2->SR & (1U << 0)) 
+    {
         TIM2->SR = 0; // Clear the update interrupt flag
-        if (state_machine_is_blinking()) {
+        if (state_machine_is_blinking()) 
+        {
             TOGGLE_BIT(GPIOA->ODR, 5); // Toggle the LED on Port A pin 5
         }
     }

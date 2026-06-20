@@ -2,6 +2,7 @@
 #include "gpio.h"
 #include "spi.h"
 #include "systick.h"
+#include "anime_matrix_font.h"
 
 bool color_change_ready = false;
 
@@ -31,8 +32,8 @@ static const uint8_t ili9341_init_sequence[] = {
     0x3A, 1, 0x55,
 
     // Frame Rate and Display Function Control
-    0xB1, 2, 0x00, 0x10,
-    0xB6, 3, 0x08, 0x82, 0x27,
+    0xB1, 2, 0x00, 0x10,  // RTNA=16 → ~119 Hz (was 0x1B)
+    0xB6, 3, 0x0A, 0x82, 0x27,  // ISC=5 (was 0x08, ISC=0) — reduces edge crosstalk
     0xF2, 1, 0x00,
     0x26, 1, 0x04,
 
@@ -139,7 +140,8 @@ void ili9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
     ili9341_send_data(color_buffer, 2);
 }
 
-void ili9341_fill_screen(uint16_t color) {
+void ili9341_fill_screen(uint16_t color) 
+{
     ili9341_set_address_window(0, 0, 319, 239);
     ili9341_send_command(0x2C);
 
@@ -147,7 +149,8 @@ void ili9341_fill_screen(uint16_t color) {
     spi2_dma_write_no_increment(&color, (240 * 320));
 }
 
-void ili9341_draw_icon(const uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height) {
+void ili9341_draw_icon(const uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height) 
+{
     uint16_t x2 = x + width - 1;
     uint16_t y2 = y + height - 1;
     ili9341_set_address_window(x, y, x2, y2);
@@ -159,6 +162,61 @@ void ili9341_draw_icon(const uint16_t * icon, uint16_t icon_buffer_size, uint16_
     spi2_dma_write16(icon, icon_buffer_size);
 }
 
+void ili9341_draw_character(char character, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color) 
+{
+    uint8_t * glyph_dimensions = get_glyph_dimensions(character);
+    uint16_t glyph_buffer_size = glyph_dimensions[0] * glyph_dimensions[1];
+    uint16_t x2 = x + glyph_dimensions[0] - 1;
+    uint16_t y2 = y + glyph_dimensions[1] - 1;
+    ili9341_set_address_window(x, y, x2, y2);
+
+    ili9341_send_command(0x2C);
+
+    uint16_t * glyph_buffer = generate_character_display_data(character, color, bg_color);
+    
+    GPIOB->ODR |= (1 << 10);
+
+    spi2_dma_write16(glyph_buffer, glyph_buffer_size);
+}
+
+void ili9341_draw_string(char * string, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color) 
+{
+    uint16_t * current_offsets;
+
+    uint16_t cursor = x;
+    uint16_t baseline = y;
+
+    uint16_t current_x;
+    uint16_t current_y;
+    uint16_t current_advance;
+
+    while(*string)
+    {
+        if (*string == ' ')
+        {
+            cursor += 8; // space width
+            string++;
+            continue;
+        }
+
+        current_offsets = get_glyph_offsets(*string);
+        current_x = cursor + current_offsets[2];
+
+        if (current_x + 18 > 319) 
+        {
+            baseline += 20;
+            cursor = x;
+            current_x = cursor + current_offsets[2];
+        }
+        
+        current_y = baseline - current_offsets[1] - (int8_t)current_offsets[3];
+        ili9341_draw_character(*string, current_x, current_y, color, bg_color);
+
+        current_advance = current_offsets[0] / 15;
+        cursor += current_advance;
+        string++;
+    }
+}
 
 bool color_change_is_ready(void)
 {

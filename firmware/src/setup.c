@@ -10,7 +10,8 @@
 #include "usart.h"
 #include "i2c.h"
 
-void setup(void) {
+void setup(void) 
+{
     // Initialize system clock to 84MHz
     rcc_init();
 

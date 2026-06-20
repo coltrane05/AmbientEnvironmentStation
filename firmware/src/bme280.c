@@ -3,6 +3,10 @@
 #include "usart.h"
 #include <stddef.h>
 
+// Calibration data for temperature and pressure and humidity.
+// These values are read from the BME280 sensor during initialization
+// and used to calculate sensor values from the raw analogue data sent
+// by the sensor.
 static uint16_t dig_T1 = 0;
 static int16_t dig_T2 = 0;
 static int16_t dig_T3 = 0;
@@ -29,25 +33,37 @@ static volatile uint8_t check_BME = 0;
 static uint8_t background_data_buffer[8];
 volatile bool bme_data_ready = false;
 
-// static uint8_t temp_cal_buffer[6];
-// static uint8_t temp_data_buffer[3];
-
 static int32_t t_fine;
 
-void reset_check_BME(void) {
+// Private fuction declarations
+void format_temp_string (int32_t temp, char* buffer, uint32_t max_len);
+void format_pres_string (uint32_t pres, char* buffer, uint32_t max_len);
+void format_hum_string (uint32_t hum, char* buffer, uint32_t max_len);
+
+int32_t calculate_bme_temp (int32_t adc_T);
+uint32_t calculate_bme_pres (int32_t adc_P);
+uint32_t calculate_bme_hum (int32_t adc_H);
+
+int32_t convert_celsius_to_fahrenheit(int32_t temp_c);
+
+void reset_check_BME(void) 
+{
     check_BME = 0;
 }
 
-void set_check_BME(void) {
+void set_check_BME(void) 
+{
     check_BME = 1;
 }
 
-uint8_t get_check_BME(void) {
+uint8_t get_check_BME(void) 
+{
     return check_BME;
 }
 
 // function to get the calibration data from the BME280
-void get_bme_cal_data(void) {
+void get_bme_cal_data(void) 
+{
     uint8_t temp_cal_buffer[6]; // Temperature calibration data is 6 bytes
     uint8_t pres_cal_buffer[18]; // Pressure calibration data is 18 bytes
     uint8_t hum_cal_buffer_1[1]; // Humidity calibration data part 1 is 1 byte
@@ -85,7 +101,8 @@ void get_bme_cal_data(void) {
 }
 
 // Initialize the BME280 sensor and get calibration data
-void bme280_init(void) {
+void bme280_init(void) 
+{
     I2C1_master_write_register(BME280_ADDR, BME280_CTRL_HUM_REG, BME280_CTRL_HUM_VAL); // setup humidity
     I2C1_master_write_register(BME280_ADDR, BME280_CTRL_MEAS_REG, BME280_CTRL_MEAS_VAL); // setup pressure and temperature
     
@@ -93,17 +110,28 @@ void bme280_init(void) {
 }
 
 // Use the calibration data to calculate temperature in celsius.
-int32_t calculate_bme_temp(int32_t adc_T) {
-
+// This function takes the adc_T value as input and returns
+// the temperature as a signed 32-bit integer.
+// The formula was pulled from the BME280 datasheet from bosch.
+int32_t calculate_bme_temp(int32_t adc_T) 
+{
     int32_t var1, var2, T;
+
     var1 = ((((adc_T >> 3) - ((int32_t)dig_T1 << 1))) * ((int32_t)dig_T2)) >> 11;
     var2 = (((((adc_T >> 4) - ((int32_t)dig_T1)) * ((adc_T >> 4) - ((int32_t)dig_T1))) >> 12) * ((int32_t)dig_T3)) >> 14;
+
     t_fine = var1 + var2;
     T = (t_fine * 5 + 128) >> 8;
+
     return T;
 }
 
-uint32_t calculate_bme_pres(int32_t adc_P) {
+// Use the calibration data to calculate pressure in pascals.
+// This function takes the adc_P value as input and returns
+// the barometric pressure as an unsigned 32-bit integer.
+// The formula was pulled form the BME280 datasheet from bosch.
+uint32_t calculate_bme_pres(int32_t adc_P) 
+{
 
     int32_t var1, var2;
     uint32_t p;
@@ -114,24 +142,35 @@ uint32_t calculate_bme_pres(int32_t adc_P) {
     var1 = (((dig_P3 * (((var1>>2) * (var1>>2)) >> 13 )) >> 3) + ((((int32_t)dig_P2) * var1)>>1))>>18;
     var1 = ((((32768+var1))*((int32_t)dig_P1))>>15);
 
-    if (var1 == 0) {
+    if (var1 == 0) 
+    {
         return 0;
     }
 
     p = (((uint32_t)(((int32_t)1048576)-adc_P)-(var2>>12)))*3125;
-    if (p < 0x80000000) {
+
+    if (p < 0x80000000) 
+    {
         p = (p << 1) / ((uint32_t)var1);
-    } else {
+    } else 
+    {
         p = (p / (uint32_t)var1) * 2;
     }
+
     var1 = (((int32_t)dig_P9) * ((int32_t)(((p>>3) * (p>>3))>>13)))>>12;
     var2 = (((int32_t)(p>>2)) * ((int32_t)dig_P8))>>13;
+
     p = (uint32_t)((int32_t)p + ((var1 + var2 + dig_P7) >> 4));
 
     return (uint32_t)p;
 }
 
-uint32_t calculate_bme_hum(int32_t adc_H) {
+// Use the calibration data to calculate percent humidity.
+// This function takes the adc_H value as input and returns
+// the relative humidity as an unsigned 32-bit integer.
+// The formula was pulled form the BME280 datasheet from bosch.
+uint32_t calculate_bme_hum(int32_t adc_H) 
+{
 
     int32_t v_x1_u32r;
     v_x1_u32r = (t_fine - ((int32_t)76800));
@@ -152,23 +191,29 @@ uint32_t calculate_bme_hum(int32_t adc_H) {
 }
 
 // Convert celsius temp to fahrenheit
-int32_t convert_celsius_to_fahrenheit(int32_t temp_c) {
+int32_t convert_celsius_to_fahrenheit(int32_t temp_c) 
+{
 
-    if(temp_c >= 0) {
+    if(temp_c >= 0) 
+    {
         return (((temp_c * 9) + 2) / 5) + 3200;
     }
-    else {
+    else 
+    {
         return (((temp_c * 9) - 2) / 5) + 3200;
     }
 }
 
-// Take the temp integer and format it into a string for display
-void format_temp_string(int32_t temp, char* buffer, uint32_t max_len) {
+// Function to format temperature value into a string that can be displayed over
+// UART terminal or LCD.
+void format_temp_string(int32_t temp, char* buffer, uint32_t max_len) 
+{
     if (max_len == 0 || buffer == 0) return;
 
     uint8_t is_negative = 0;
 
-    if (temp < 0) {
+    if (temp < 0) 
+    {
         is_negative = 1;
         temp = -temp;
     }
@@ -179,11 +224,14 @@ void format_temp_string(int32_t temp, char* buffer, uint32_t max_len) {
     char reversed_whole[10];
     int i = 0;
 
-    if (whole == 0) {
+    if (whole == 0) 
+    {
         reversed_whole[i++] = '0';
     }
-    else {
-        while (whole > 0 && i < 10) {
+    else 
+    {
+        while (whole > 0 && i < 10) 
+        {
             reversed_whole[i++] = (whole % 10) + '0';
             whole /= 10;
         }
@@ -191,11 +239,13 @@ void format_temp_string(int32_t temp, char* buffer, uint32_t max_len) {
 
     uint32_t buff_idx = 0;
     
-    if (is_negative && buff_idx < max_len - 1) {
+    if (is_negative && buff_idx < max_len - 1) 
+    {
         buffer[buff_idx++] = '-';
     }
 
-    while (i > 0 && buff_idx < max_len - 1) {
+    while (i > 0 && buff_idx < max_len - 1) 
+    {
         buffer[buff_idx++] = reversed_whole[--i];
     }
 
@@ -206,7 +256,10 @@ void format_temp_string(int32_t temp, char* buffer, uint32_t max_len) {
     buffer[buff_idx] = '\0';
 }
 
-void format_pres_string(uint32_t pres, char* buffer, uint32_t max_len) {
+// Function to format pressure value into a string that can be displayed over
+// UART terminal or LCD.
+void format_pres_string(uint32_t pres, char* buffer, uint32_t max_len) 
+{
     if (max_len == 0 || buffer == 0) return;
 
     uint32_t whole = pres / 100; // Convert Pa to hPa for the whole number
@@ -215,18 +268,22 @@ void format_pres_string(uint32_t pres, char* buffer, uint32_t max_len) {
     char reversed_whole[10];
     int i = 0;
 
-    if (whole == 0) {
+    if (whole == 0) 
+    {
         reversed_whole[i++] = '0';
     }
-    else {
-        while (whole > 0 && i < 10) {
+    else 
+    {
+        while (whole > 0 && i < 10) 
+        {
             reversed_whole[i++] = (whole % 10) + '0';
             whole /= 10;
         }
     }
 
     uint32_t buff_idx = 0;
-    while (i > 0 && buff_idx < max_len - 1) {
+    while (i > 0 && buff_idx < max_len - 1) 
+    {
         buffer[buff_idx++] = reversed_whole[--i];
     }
 
@@ -237,7 +294,10 @@ void format_pres_string(uint32_t pres, char* buffer, uint32_t max_len) {
     buffer[buff_idx] = '\0';
 }
 
-void format_hum_string(uint32_t hum, char* buffer, uint32_t max_len) {
+// Function to format humidity value into a string that can be displayed over
+// UART terminal or LCD.
+void format_hum_string(uint32_t hum, char* buffer, uint32_t max_len) 
+{
     if (max_len == 0 || buffer == 0) return;
 
     uint32_t whole = hum / 1024;
@@ -246,18 +306,22 @@ void format_hum_string(uint32_t hum, char* buffer, uint32_t max_len) {
     char reversed_whole[10];
     int i = 0;
 
-    if (whole == 0) {
+    if (whole == 0) 
+    {
         reversed_whole[i++] = '0';
     }
-    else {
-        while (whole > 0 && i < 10) {
+    else 
+    {
+        while (whole > 0 && i < 10) 
+        {
             reversed_whole[i++] = (whole % 10) + '0';
             whole /= 10;
         }
     }
 
     uint32_t buff_idx = 0;
-    while (i > 0 && buff_idx < max_len - 1) {
+    while (i > 0 && buff_idx < max_len - 1) 
+    {
         buffer[buff_idx++] = reversed_whole[--i];
     }
 
@@ -269,15 +333,24 @@ void format_hum_string(uint32_t hum, char* buffer, uint32_t max_len) {
     buffer[buff_idx] = '\0';
 }
 
-void bme_data_ready_callback(void) {
+// Callback function that gets called when the I2C state machine has finished
+// reading data from the BME280
+void bme_data_ready_callback(void) 
+{
     bme_data_ready = true;
 }
 
-bool get_bme_data_ready(void) {
+// Function to get the state of BME280 data. Used in the main function to check
+// if data is ready for processing.
+bool bme_data_is_ready(void) 
+{
     return bme_data_ready;
 }
 
-void process_and_print_bme_data(void) {
+// Function to take raw all raw analog data from the BME280 and convert it to
+// human readable data and print it to the USART terminal.
+void process_and_print_bme_data(void) 
+{
     int32_t adc_P = ((uint32_t)background_data_buffer[0] << 12) |
                     ((uint32_t)background_data_buffer[1] << 4)  |
                     (background_data_buffer[2] >> 4);
@@ -318,6 +391,9 @@ void process_and_print_bme_data(void) {
     bme_data_ready = false;
 }
 
-void start_bme_data_collection(void) {
+// Function to kick off data collection from BME280, utilizing the I2C interface
+// and custom state machine.
+void start_bme_data_collection(void) 
+{
     I2C1_master_receive(BME280_ADDR, BME280_DATA_START_REG, 8, background_data_buffer, bme_data_ready_callback);
 }

@@ -24,4 +24,7 @@ bool color_change_is_ready (void);
 void set_color_change_ready (void);
 void reset_color_change_ready (void);
 void ili9341_draw_icon (const uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height);
+void ili9341_draw_character (char character, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color);
+void ili9341_draw_string (char * string, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color);
+
 #endif

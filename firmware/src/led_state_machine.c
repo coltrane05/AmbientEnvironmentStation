@@ -76,7 +76,8 @@ void led_solid(void)
     SET_BIT(GPIOA->ODR, 5);
 }
 
-void led_dimmer(void) {
+void led_dimmer(void) 
+{
     tim2_pwm_init();
 }
 
@@ -114,7 +115,8 @@ bool state_machine_is_blinking (void)
     }
 }
 
-bool state_machine_is_dimming(void) {
+bool state_machine_is_dimming(void) 
+{
     if (led_state_machine.currState == ST_LED_DIMMER)
     {
         return true;
@@ -130,7 +132,8 @@ int8_t get_led_breathing_direction(void)
     return led_breathing_direction;
 }
 
-void flip_led_breathing_direction(void) {
+void flip_led_breathing_direction(void) 
+{
     led_breathing_direction *= -1;
 }
 

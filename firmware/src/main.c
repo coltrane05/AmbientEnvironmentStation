@@ -55,14 +55,21 @@ int main(void) {
                 ili9341_draw_icon(fahrenheit, FAHRENHEIT_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
                 inc = 2;
             }
-            else {
+            else if (inc == 2) {
                 ili9341_draw_icon(pressure, PRESSURE_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
+                inc = 3;
+            }
+            else 
+            {
+                ili9341_draw_string("868.18 hPa", 20, 30, 0xFFFF, 0x0000);
                 inc = 1;
             }
+
+
             reset_color_change_ready();
         }
 
-        if (get_bme_data_ready()) 
+        if (bme_data_is_ready()) 
         {
             process_and_print_bme_data();
         }
@@ -79,7 +86,8 @@ int main(void) {
 
         if (state_machine_is_dimming() && (millis() - get_previous_systick_count() >= 50)) 
         {
-            if (get_current_duty_cycle() == 100 || get_current_duty_cycle() == 0) {
+            if (get_current_duty_cycle() == 100 || get_current_duty_cycle() == 0) 
+            {
                 flip_led_breathing_direction();
             }
 
@@ -89,12 +97,6 @@ int main(void) {
 
             set_previous_systick_count(millis());
         }
-
-        // if (millis() == 5000) 
-        // {
-        //     ili9341_reset();
-        //     ili9341_init();
-        // }
     }
     return 0;
 }
