@@ -7,7 +7,10 @@
 bool color_change_ready = false;
 bool screen_draw_busy = false;
 
+ili9341_string_context_t string_context;
+
 void screen_draw_busy_callback (void); 
+void ili9341_draw_string_callback (void);
 
 static const uint8_t ili9341_init_sequence[] = {
     0x01, 0xFF, 150, // Software Reset
@@ -154,7 +157,7 @@ void ili9341_fill_screen(uint16_t color)
     screen_draw_busy = true;
 }
 
-void ili9341_draw_icon(const uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height) 
+void ili9341_draw_icon(const volatile uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height) 
 {
     uint16_t x2 = x + width - 1;
     uint16_t y2 = y + height - 1;
@@ -164,7 +167,8 @@ void ili9341_draw_icon(const uint16_t * icon, uint16_t icon_buffer_size, uint16_
 
     GPIOB->ODR |= (1 << 10); // DC pin HIGH for data
     // icon_buffer_size is the number of 16-bit pixels, not bytes
-    spi2_dma_write16(icon, icon_buffer_size);
+    screen_draw_busy = true;
+    spi2_dma_write16_non_blocking(icon, icon_buffer_size, screen_draw_busy_callback);
 }
 
 void ili9341_draw_character(char character, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color) 
@@ -181,45 +185,76 @@ void ili9341_draw_character(char character, uint16_t x, uint16_t y, uint16_t col
     
     GPIOB->ODR |= (1 << 10);
 
-    spi2_dma_write16(glyph_buffer, glyph_buffer_size);
+    spi2_dma_write16_non_blocking(glyph_buffer, glyph_buffer_size, ili9341_draw_string_callback);
 }
 
 void ili9341_draw_string(char * string, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color) 
 {
-    uint16_t * current_offsets;
+    string_context.string = string;
+    string_context.x = x;
+    string_context.y = y;
+    string_context.color = color;
+    string_context.bg_color = bg_color;
 
-    uint16_t cursor = x;
-    uint16_t baseline = y;
+    string_context.cursor = x;
+    string_context.baseline = y;
 
-    uint16_t current_x;
-    uint16_t current_y;
-    uint16_t current_advance;
-
-    while(*string)
+    if(*string_context.string)
     {
-        if (*string == ' ')
+        if (*string_context.string == ' ')
         {
-            cursor += 8; // space width
-            string++;
-            continue;
+            string_context.cursor += 8; // space width
+            string_context.string++;
+            ili9341_draw_string_callback();
+            return;
         }
 
-        current_offsets = get_glyph_offsets(*string);
-        current_x = cursor + current_offsets[2];
+        string_context.current_offsets = get_glyph_offsets(*string_context.string);
+        string_context.current_x = string_context.cursor + string_context.current_offsets[2];
 
-        if (current_x + 18 > 319) 
+        if (string_context.current_x + 18 > 319) 
         {
-            baseline += 20;
-            cursor = x;
-            current_x = cursor + current_offsets[2];
+            string_context.baseline += 20;
+            string_context.cursor = string_context.x;
+            string_context.current_x = string_context.cursor + string_context.current_offsets[2];
         }
         
-        current_y = baseline - current_offsets[1] - (int8_t)current_offsets[3];
-        ili9341_draw_character(*string, current_x, current_y, color, bg_color);
+        string_context.current_y = string_context.baseline - string_context.current_offsets[1] - (int8_t)string_context.current_offsets[3];
+        ili9341_draw_character(*string_context.string, string_context.current_x, string_context.current_y, string_context.color, string_context.bg_color);
 
-        current_advance = current_offsets[0] / 15;
-        cursor += current_advance;
-        string++;
+        string_context.current_advance = string_context.current_offsets[0] / 15;
+        string_context.cursor += string_context.current_advance;
+        string_context.string++;
+    }
+}
+
+void ili9341_draw_string_callback(void) 
+{
+    // Skip leading spaces without recursion to avoid stack growth
+    while (*string_context.string == ' ')
+    {
+        string_context.cursor += 8; // space width
+        string_context.string++;
+    }
+
+    if(*string_context.string)
+    {
+        string_context.current_offsets = get_glyph_offsets(*string_context.string);
+        string_context.current_x = string_context.cursor + string_context.current_offsets[2];
+
+        if (string_context.current_x + 18 > 319) 
+        {
+            string_context.baseline += 20;
+            string_context.cursor = string_context.x;
+            string_context.current_x = string_context.cursor + string_context.current_offsets[2];
+        }
+        
+        string_context.current_y = string_context.baseline - string_context.current_offsets[1] - (int8_t)string_context.current_offsets[3];
+        ili9341_draw_character(*string_context.string, string_context.current_x, string_context.current_y, string_context.color, string_context.bg_color);
+
+        string_context.current_advance = string_context.current_offsets[0] / 15;
+        string_context.cursor += string_context.current_advance;
+        string_context.string++;
     }
 }
 

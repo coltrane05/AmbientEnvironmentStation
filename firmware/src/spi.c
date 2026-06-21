@@ -12,6 +12,8 @@ static volatile dma_write_t dma_write = {
     .callback = NULL
 };
 
+static volatile bool dma_callback_pending = false;
+
 void spi2_init(void)
 {
     // Set output pin mode for DC and Reset pins on ILI9341
@@ -118,7 +120,7 @@ void spi2_dma_write16(const uint16_t * data_buffer, uint32_t buffer_size)
     DMA1->S4CR &= ~(0b11 << 13); // Memory data size: 8-bit
 }
 
-void spi2_dma_write16_non_blocking(uint16_t * data_buffer, uint32_t buffer_size, void (* callback)(void))
+void spi2_dma_write16_non_blocking(const volatile uint16_t * data_buffer, uint32_t buffer_size, void (* callback)(void))
 {
     dma_write.callback = callback;
 
@@ -138,6 +140,7 @@ void spi2_dma_write16_non_blocking(uint16_t * data_buffer, uint32_t buffer_size,
     // Configure DMA for 16-bit transfers
     DMA1->S4CR |= (0b01 << 11);  // Peripheral data size: 16-bit
     DMA1->S4CR |= (0b01 << 13);  // Memory data size: 16-bit
+    DMA1->S4CR |= (1U << 4); // Transfer Complete Interrupt Enable
 
     // Clear all interrupt flags for Stream 4 in High Interrupt Flag Clear Register
     // (Bits 0, 2, 3, 4, 5 correspond to Stream 4. Write 1 to clear)
@@ -159,6 +162,7 @@ void spi2_dma_write16_non_blocking(uint16_t * data_buffer, uint32_t buffer_size,
     else 
     {
         dma_write.transfer_size = buffer_size;
+        dma_write.remaining = 0;  // Must clear remaining to avoid infinite chaining
     }
 
     GPIOB->ODR &= ~(1 << 12); // Pull CS pin low to prepare for transmission
@@ -234,9 +238,13 @@ void spi2_dma_write16_no_increment(const uint16_t * data_buffer, uint32_t buffer
     DMA1->S4CR &= ~(0b11 << 13); // Memory data size: 8-bit
 }
 
-void spi2_dma_write16_no_increment_non_blocking(uint16_t * data_buffer, uint32_t buffer_size, void (* callback)(void))
+void spi2_dma_write16_no_increment_non_blocking(const volatile uint16_t * data_buffer, uint32_t buffer_size, void (* callback)(void))
 {
     dma_write.callback = callback;
+
+    // Copy the color value into persistent storage so it survives
+    // across non-blocking chunks even if the caller's stack goes out of scope
+    dma_write.no_increment_value = *data_buffer;
 
     // Ensure DMA stream is disabled before configuring
     DMA1->S4CR &= ~(1U << 0);
@@ -261,15 +269,10 @@ void spi2_dma_write16_no_increment_non_blocking(uint16_t * data_buffer, uint32_t
     // (Bits 0, 2, 3, 4, 5 correspond to Stream 4. Write 1 to clear)
     DMA1->HIFCR = (0b111101 << 0); 
 
-    // // Set addresses (S4PAR needs the address of the DR register)
-    // DMA1->S4PAR = (uint32_t)&SPI2->DR;
-    
-    
-    // DMA1->S4M0AR = (uint32_t)data_buffer; 
-
     if (buffer_size > 65535)
     {
-        dma_write.remaining_data_buffer = data_buffer;
+        // Use the persistent value address so subsequent chunks read the correct color
+        dma_write.remaining_data_buffer = &dma_write.no_increment_value;
         dma_write.transfer_size = 65535;
         dma_write.remaining = buffer_size - dma_write.transfer_size;
     }
@@ -279,9 +282,9 @@ void spi2_dma_write16_no_increment_non_blocking(uint16_t * data_buffer, uint32_t
         dma_write.remaining = 0;
     }
 
-    // Set addresses (S4PAR needs the address of the DR register)
+    // Set addresses — use the persistent color for DMA source
     DMA1->S4PAR = (uint32_t)&SPI2->DR;
-    DMA1->S4M0AR = (uint32_t)data_buffer; 
+    DMA1->S4M0AR = (uint32_t)&dma_write.no_increment_value;
 
     GPIOB->ODR &= ~(1 << 12); // Pull CS pin low to prepare for transmission
 
@@ -295,7 +298,6 @@ void spi2_handle_dma_interrupt(void)
     {
         if (dma_write.remaining > 0) {
             DMA1->HIFCR = (0b111101 << 0);
-            usart2_println("made it here");
 
             if (DMA1->S4CR & (1U << 10)) 
             {
@@ -309,7 +311,6 @@ void spi2_handle_dma_interrupt(void)
         else 
         {
             // DMA1->S4CR &= ~(1U << 4); // Clear transfer complete interrupt enable bit.
-            usart2_println("made it here 2");
             dma_write.remaining = 0;
             dma_write.remaining_data_buffer = NULL;
             dma_write.transfer_size = 0;
@@ -338,10 +339,22 @@ void spi2_handle_dma_interrupt(void)
             void (* cb)(void) = dma_write.callback;
             if (cb != NULL)
             {
-                cb();
-                dma_write.callback = NULL;
+                dma_callback_pending = true; 
             }
             DMA1->S4CR &= ~(1U << 4);
+        }
+    }
+}
+
+void spi2_process_callbacks(void)
+{
+    if (dma_callback_pending)
+    {
+        dma_callback_pending = false;
+        void (* cb)(void) = dma_write.callback;
+        if (cb != NULL)
+        {
+            cb();
         }
     }
 }

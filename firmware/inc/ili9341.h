@@ -4,14 +4,30 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define ILI9341_COLORS {.RED = 0xF800, .GREEN = 0x07E0, .BLUE = 0x001F}
+#define ILI9341_COLORS {.RED = 0xF800, .GREEN = 0x07E0, .BLUE = 0x001F, .BLACK = 0x0000}
 
-const typedef struct 
+typedef struct 
 {
     const uint16_t RED;
     const uint16_t GREEN;
     const uint16_t BLUE;
+    const uint16_t BLACK;
 } ili9341_colors;
+
+typedef struct
+{
+    char * string;
+    uint16_t x;
+    uint16_t y;
+    uint16_t color;
+    uint16_t bg_color;
+    uint16_t * current_offsets;
+    uint16_t cursor;
+    uint16_t baseline;
+    uint16_t current_x;
+    uint16_t current_y;
+    uint16_t current_advance;
+} ili9341_string_context_t;
 
 void ili9341_init (void);
 void ili9341_send_command (uint8_t command);
@@ -23,7 +39,7 @@ void ili9341_fill_screen (uint16_t color);
 bool color_change_is_ready (void);
 void set_color_change_ready (void);
 void reset_color_change_ready (void);
-void ili9341_draw_icon (const uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height);
+void ili9341_draw_icon (const volatile uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height);
 void ili9341_draw_character (char character, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color);
 void ili9341_draw_string (char * string, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color);
 void screen_draw_busy_callback (void);

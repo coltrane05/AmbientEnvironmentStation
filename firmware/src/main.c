@@ -31,12 +31,13 @@ int main(void) {
 
     // ili9341_draw_pixel(120, 160, 0xF800);
 
-    // const ili9341_colors colors = ILI9341_COLORS;
+    const ili9341_colors colors = ILI9341_COLORS;
 
     uint8_t inc = 0;
 
     while(1) 
     {
+        spi2_process_callbacks();
         if (get_check_BME()) 
         {
             start_bme_data_collection();
@@ -47,7 +48,7 @@ int main(void) {
         {
             if (inc == 0) 
             {
-                ili9341_fill_screen(0x0000);
+                ili9341_fill_screen(colors.BLACK);
                 inc = 1;
             }
             else if (inc == 1) 
@@ -56,7 +57,7 @@ int main(void) {
                 inc = 2;
             }
             else if (inc == 2) {
-                ili9341_draw_icon(pressure, PRESSURE_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
+                ili9341_draw_icon(pressure, PRESSURE_WIDTH * PRESSURE_HEIGHT, 20, 60, PRESSURE_WIDTH, PRESSURE_HEIGHT);
                 inc = 3;
             }
             else 
