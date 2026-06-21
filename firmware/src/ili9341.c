@@ -5,6 +5,9 @@
 #include "anime_matrix_font.h"
 
 bool color_change_ready = false;
+bool screen_draw_busy = false;
+
+void screen_draw_busy_callback (void); 
 
 static const uint8_t ili9341_init_sequence[] = {
     0x01, 0xFF, 150, // Software Reset
@@ -146,7 +149,9 @@ void ili9341_fill_screen(uint16_t color)
     ili9341_send_command(0x2C);
 
     GPIOB->ODR |= (1 << 10); // DC pin HIGH for data
-    spi2_dma_write_no_increment(&color, (240 * 320));
+    spi2_dma_write16_no_increment_non_blocking(&color, (240 * 320), screen_draw_busy_callback);
+
+    screen_draw_busy = true;
 }
 
 void ili9341_draw_icon(const uint16_t * icon, uint16_t icon_buffer_size, uint16_t x, uint16_t y, uint16_t width, uint16_t height) 
@@ -230,5 +235,14 @@ void set_color_change_ready (void)
 void reset_color_change_ready (void)
 {
     color_change_ready = false;
+}
+
+void screen_draw_busy_callback(void)
+{
+    screen_draw_busy = false;
+}
+
+bool screen_draw_is_busy(void) {
+    return screen_draw_busy;
 }
   

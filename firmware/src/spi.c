@@ -1,8 +1,16 @@
+#include <stddef.h>
 #include "spi.h"
 #include "rcc.h"
 #include "gpio.h"
 #include "dma.h"
 #include "usart.h"
+
+static volatile dma_write_t dma_write = {
+    .remaining_data_buffer = NULL,
+    .transfer_size = 0,
+    .remaining = 0,
+    .callback = NULL
+};
 
 void spi2_init(void)
 {
@@ -67,7 +75,7 @@ void spi2_dma_write16(const uint16_t * data_buffer, uint32_t buffer_size)
 {
     // Ensure DMA stream is disable before configuring
     DMA1->S4CR &= ~(1U << 0);
-    while (DMA1->S4CR & (1U << 0)); // Wait until EN bti is fully cleared
+    while (DMA1->S4CR & (1U << 0)); // Wait until EN bit is fully cleared
 
     while((SPI2->SR & (1 << 7))); // Ensure SPI2 is not busy
     SPI2->CR1 &= ~(1 << 6); //Disable SPI to make config changes
@@ -110,7 +118,56 @@ void spi2_dma_write16(const uint16_t * data_buffer, uint32_t buffer_size)
     DMA1->S4CR &= ~(0b11 << 13); // Memory data size: 8-bit
 }
 
-void spi2_dma_write_no_increment(const uint16_t * data_buffer, uint32_t buffer_size)
+void spi2_dma_write16_non_blocking(uint16_t * data_buffer, uint32_t buffer_size, void (* callback)(void))
+{
+    dma_write.callback = callback;
+
+    // Ensure DMA stream is disabled before configuring
+    DMA1->S4CR &= ~(1U << 0);
+    while (DMA1->S4CR & (1U << 0)); // Wait until EN bit is fully cleared
+
+    // Wait for SPI to be not busy before changing configuration
+    while((SPI2->SR & (1 << 7)));
+    // Disable SPI to change data frame format
+    SPI2->CR1 &= ~(1 << 6);
+    // Set to 16-bit mode
+    SPI2->CR1 |= (1 << 11); // Set data frame format bit
+    // Re-enable SPI
+    SPI2->CR1 |= (1 << 6);
+
+    // Configure DMA for 16-bit transfers
+    DMA1->S4CR |= (0b01 << 11);  // Peripheral data size: 16-bit
+    DMA1->S4CR |= (0b01 << 13);  // Memory data size: 16-bit
+
+    // Clear all interrupt flags for Stream 4 in High Interrupt Flag Clear Register
+    // (Bits 0, 2, 3, 4, 5 correspond to Stream 4. Write 1 to clear)
+    DMA1->HIFCR = (0b111101 << 0); 
+
+    // Set addresses (S4PAR needs the address of the DR register)
+    DMA1->S4PAR = (uint32_t)&SPI2->DR;
+    
+    
+    DMA1->S4M0AR = (uint32_t)data_buffer; 
+
+    if (buffer_size > 65535)
+    {
+        dma_write.remaining_data_buffer = data_buffer;
+        dma_write.remaining_data_buffer += 65535;
+        dma_write.transfer_size = 65535;
+        dma_write.remaining = buffer_size - dma_write.transfer_size;
+    }
+    else 
+    {
+        dma_write.transfer_size = buffer_size;
+    }
+
+    GPIOB->ODR &= ~(1 << 12); // Pull CS pin low to prepare for transmission
+
+    DMA1->S4NDTR = dma_write.transfer_size;
+    DMA1->S4CR |= (1U << 0);
+}
+
+void spi2_dma_write16_no_increment(const uint16_t * data_buffer, uint32_t buffer_size)
 {
     // Ensure DMA stream is disabled before configuring
     DMA1->S4CR &= ~(1U << 0);
@@ -121,14 +178,14 @@ void spi2_dma_write_no_increment(const uint16_t * data_buffer, uint32_t buffer_s
     // Disable SPI to change data frame format
     SPI2->CR1 &= ~(1 << 6);
     // Set to 16-bit mode
-    SPI2->CR1 |= (1 << 11); // Set DFF bit
+    SPI2->CR1 |= (1 << 11); // Set data frame format bit
     // Re-enable SPI
     SPI2->CR1 |= (1 << 6);
 
     // Configure DMA for 16-bit transfers and disable memory increment
     DMA1->S4CR &= ~(1U << 10);   // Disable Memory increment mode
-    DMA1->S4CR |= (0b01 << 11);  // Peripheral data size: 16-bit (Half-word)
-    DMA1->S4CR |= (0b01 << 13);  // Memory data size: 16-bit (Half-word)
+    DMA1->S4CR |= (0b01 << 11);  // Peripheral data size: 16-bit
+    DMA1->S4CR |= (0b01 << 13);  // Memory data size: 16-bit
 
     // Clear all interrupt flags for Stream 4 in High Interrupt Flag Clear Register
     // (Bits 0, 2, 3, 4, 5 correspond to Stream 4. Write 1 to clear)
@@ -175,4 +232,116 @@ void spi2_dma_write_no_increment(const uint16_t * data_buffer, uint32_t buffer_s
     DMA1->S4CR |= (1U << 10);    // Enable Memory increment mode
     DMA1->S4CR &= ~(0b11 << 11); // Peripheral data size: 8-bit
     DMA1->S4CR &= ~(0b11 << 13); // Memory data size: 8-bit
+}
+
+void spi2_dma_write16_no_increment_non_blocking(uint16_t * data_buffer, uint32_t buffer_size, void (* callback)(void))
+{
+    dma_write.callback = callback;
+
+    // Ensure DMA stream is disabled before configuring
+    DMA1->S4CR &= ~(1U << 0);
+    while (DMA1->S4CR & (1U << 0)); // Wait until EN bit is fully cleared
+
+    // Wait for SPI to be not busy before changing configuration
+    while((SPI2->SR & (1 << 7)));
+    // Disable SPI to change data frame format
+    SPI2->CR1 &= ~(1 << 6);
+    // Set to 16-bit mode
+    SPI2->CR1 |= (1 << 11); // Set data frame format bit
+    // Re-enable SPI
+    SPI2->CR1 |= (1 << 6);
+
+    // Configure DMA for 16-bit transfers and disable memory increment
+    DMA1->S4CR &= ~(1U << 10);   // Disable Memory increment mode
+    DMA1->S4CR |= (0b01 << 11);  // Peripheral data size: 16-bit
+    DMA1->S4CR |= (0b01 << 13);  // Memory data size: 16-bit
+    DMA1->S4CR |= (1U << 4); // Transfer Complete Interrupt Enable
+
+    // Clear all interrupt flags for Stream 4 in High Interrupt Flag Clear Register
+    // (Bits 0, 2, 3, 4, 5 correspond to Stream 4. Write 1 to clear)
+    DMA1->HIFCR = (0b111101 << 0); 
+
+    // // Set addresses (S4PAR needs the address of the DR register)
+    // DMA1->S4PAR = (uint32_t)&SPI2->DR;
+    
+    
+    // DMA1->S4M0AR = (uint32_t)data_buffer; 
+
+    if (buffer_size > 65535)
+    {
+        dma_write.remaining_data_buffer = data_buffer;
+        dma_write.transfer_size = 65535;
+        dma_write.remaining = buffer_size - dma_write.transfer_size;
+    }
+    else 
+    {
+        dma_write.transfer_size = buffer_size;
+        dma_write.remaining = 0;
+    }
+
+    // Set addresses (S4PAR needs the address of the DR register)
+    DMA1->S4PAR = (uint32_t)&SPI2->DR;
+    DMA1->S4M0AR = (uint32_t)data_buffer; 
+
+    GPIOB->ODR &= ~(1 << 12); // Pull CS pin low to prepare for transmission
+
+    DMA1->S4NDTR = dma_write.transfer_size;
+    DMA1->S4CR |= (1U << 0);
+}
+
+void spi2_handle_dma_interrupt(void)
+{
+    if (DMA1->HISR & (1U << 5))
+    {
+        if (dma_write.remaining > 0) {
+            DMA1->HIFCR = (0b111101 << 0);
+            usart2_println("made it here");
+
+            if (DMA1->S4CR & (1U << 10)) 
+            {
+                spi2_dma_write16_non_blocking(dma_write.remaining_data_buffer, dma_write.remaining, dma_write.callback);
+            }
+            else 
+            {
+                spi2_dma_write16_no_increment_non_blocking(dma_write.remaining_data_buffer, dma_write.remaining, dma_write.callback);
+            }
+        }
+        else 
+        {
+            // DMA1->S4CR &= ~(1U << 4); // Clear transfer complete interrupt enable bit.
+            usart2_println("made it here 2");
+            dma_write.remaining = 0;
+            dma_write.remaining_data_buffer = NULL;
+            dma_write.transfer_size = 0;
+
+            DMA1->HIFCR = (0b111101 << 0);
+
+            while((SPI2->SR & (1 << 7))); // Wait for SPI to not be busy
+            
+            GPIOB->ODR |= (1 << 12); // Set CS pin high to end transaction
+
+            if (SPI2->CR1 & (1U << 11))
+            {
+                SPI2->CR1 &= ~(1U << 6); // Disable SPI to change configs
+                SPI2->CR1 &= ~(1U << 11); // Change data frame format back to 8-bit
+                SPI2->CR1 |= (1U << 6); // Re-enable SPI
+
+                DMA1->S4CR &= ~(0b11 << 11); // Peripheral data size: 8-bit
+                DMA1->S4CR &= ~(0b11 << 13); // Memory data size: 8-bit
+            }
+
+            if (!(DMA1->S4CR & (1U << 10))) // Check if Memory increment is disabled
+            {
+                DMA1->S4CR |= (1U << 10); // Enable Memory increment mode
+            }
+
+            void (* cb)(void) = dma_write.callback;
+            if (cb != NULL)
+            {
+                cb();
+                dma_write.callback = NULL;
+            }
+            DMA1->S4CR &= ~(1U << 4);
+        }
+    }
 }

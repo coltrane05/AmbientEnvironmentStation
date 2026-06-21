@@ -44,6 +44,7 @@ void setup(void)
     NVIC->ISER[1] |= (1U << 6); // USART2 Interrupt (IRQ 38)
     NVIC->ISER[0] |= (1U << 31); // I2C1_EV Interrupt (IRQ 31)
     NVIC->ISER[1] |= (1U << 0); // I2C1_ER Interrupt (IRQ 32)
+    NVIC->ISER[0] |= (1U << 15); // DMA1 Stream4 Interrupt (IRQ 15)
 
 
     // System Config for external interrupt on line 13 Port C

@@ -8,6 +8,7 @@
 #include "usart.h"
 #include "i2c.h"
 #include "systick.h"
+#include "spi.h"
 
 void Systick_Handler(void)
 {
@@ -40,4 +41,9 @@ void I2C1_EV_IRQHandler(void)
 void I2C1_ER_IRQHandler(void) 
 {
     I2C1_handle_error_interrupt();
+}
+
+void DMA1_Stream4_IRQHandler(void)
+{
+    spi2_handle_dma_interrupt();
 }

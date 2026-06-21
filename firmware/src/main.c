@@ -43,7 +43,7 @@ int main(void) {
             reset_check_BME();
         }
 
-        if (color_change_is_ready())
+        if (color_change_is_ready() && !screen_draw_is_busy())
         {
             if (inc == 0) 
             {
