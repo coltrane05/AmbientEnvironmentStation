@@ -6,8 +6,19 @@
 
 bool color_change_ready = false;
 bool screen_draw_busy = false;
+bool clear_text_flag = false;
+bool icon_flag = false;
+bool text_flag = false;
+uint16_t background_color = 0x0000;
 
 ili9341_string_context_t string_context;
+ili9341_text_bounds_t text_bounds = {
+    .text_is_displayed = false,
+    .min_x = 320,
+    .max_x = 0,
+    .min_y = 240,
+    .max_y = 0
+};
 
 void screen_draw_busy_callback (void); 
 void ili9341_draw_string_callback (void);
@@ -148,11 +159,27 @@ void ili9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 
 void ili9341_fill_screen(uint16_t color) 
 {
+    background_color = color;
+
     ili9341_set_address_window(0, 0, 319, 239);
     ili9341_send_command(0x2C);
 
     GPIOB->ODR |= (1 << 10); // DC pin HIGH for data
     spi2_dma_write16_no_increment_non_blocking(&color, (240 * 320), screen_draw_busy_callback);
+
+    screen_draw_busy = true;
+}
+
+void ili9341_fill_area(uint16_t color, uint16_t x, uint16_t y, uint16_t x2, uint16_t y2)
+{
+    uint16_t width = x2 - x + 1;
+    uint16_t height = y2 - y + 1;
+
+    ili9341_set_address_window(x, y, x2, y2);
+    ili9341_send_command(0x2C);
+
+    GPIOB->ODR |= (1 << 10); // DC pin HIGH for data
+    spi2_dma_write16_no_increment_non_blocking(&color, width * height, screen_draw_busy_callback);
 
     screen_draw_busy = true;
 }
@@ -179,6 +206,35 @@ void ili9341_draw_character(char character, uint16_t x, uint16_t y, uint16_t col
     uint16_t y2 = y + glyph_dimensions[1] - 1;
     ili9341_set_address_window(x, y, x2, y2);
 
+    if (text_bounds.text_is_displayed)
+    {
+        if (text_bounds.min_x > x)
+        {
+            text_bounds.min_x = x;
+        }
+        if (text_bounds.max_x < x2)
+        {
+            text_bounds.max_x = x2;
+        }
+        if (text_bounds.min_y > y)
+        {
+            text_bounds.min_y = y;
+        }
+        if (text_bounds.max_y < y2)
+        {
+            text_bounds.max_y = y2;
+        }
+    }
+    else
+    {
+        text_bounds.min_x = x;
+        text_bounds.max_x = x2;
+        text_bounds.min_y = y;
+        text_bounds.max_y = y2;
+        text_bounds.text_is_displayed = true;
+    }
+
+
     ili9341_send_command(0x2C);
 
     uint16_t * glyph_buffer = generate_character_display_data(character, color, bg_color);
@@ -188,7 +244,7 @@ void ili9341_draw_character(char character, uint16_t x, uint16_t y, uint16_t col
     spi2_dma_write16_non_blocking(glyph_buffer, glyph_buffer_size, ili9341_draw_string_callback);
 }
 
-void ili9341_draw_string(char * string, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color) 
+void ili9341_draw_string(char * string, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color)
 {
     string_context.string = string;
     string_context.x = x;
@@ -226,6 +282,16 @@ void ili9341_draw_string(char * string, uint16_t x, uint16_t y, uint16_t color, 
         string_context.cursor += string_context.current_advance;
         string_context.string++;
     }
+}
+
+void ili9341_clear_text(void)
+{
+    ili9341_fill_area(background_color,text_bounds.min_x, text_bounds.min_y, text_bounds.max_x, text_bounds.max_y);
+    text_bounds.min_x = 320;
+    text_bounds.max_x = 0;
+    text_bounds.min_y = 240;
+    text_bounds.max_y = 0;
+    text_bounds.text_is_displayed = false;
 }
 
 void ili9341_draw_string_callback(void) 
@@ -277,7 +343,53 @@ void screen_draw_busy_callback(void)
     screen_draw_busy = false;
 }
 
-bool screen_draw_is_busy(void) {
+bool screen_draw_is_busy(void) 
+{
     return screen_draw_busy;
+}
+
+void set_clear_text_flag(void)
+{
+    clear_text_flag = true;
+}
+
+void reset_clear_text_flag(void)
+{
+    clear_text_flag = false;
+}
+
+bool clear_text_is_set(void)
+{
+    return clear_text_flag;
+}
+
+void set_icon_flag(void) 
+{
+    icon_flag = true;
+}
+
+void reset_icon_flag(void)
+{
+    icon_flag = false;
+}
+
+bool icon_flag_is_set(void)
+{
+    return icon_flag;
+}
+
+void set_text_flag(void)
+{
+    text_flag = true;
+}
+
+void reset_text_flag(void)
+{
+    text_flag = false;
+}
+
+bool text_flag_is_set(void)
+{
+    return text_flag;
 }
   

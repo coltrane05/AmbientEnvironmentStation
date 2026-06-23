@@ -66,12 +66,25 @@ void process_read_buffer(void)
 
     usart2_println("");
 
-    set_color_change_ready();
-
     // Check for "read" command and trigger BME280 data collection
     if (strings_match(read_buffer.data, "read"))
     {
         set_check_BME();
+    }
+
+    if (strings_match(read_buffer.data, "clear text"))
+    {
+        set_clear_text_flag();
+    }
+
+    if (strings_match(read_buffer.data, "icon"))
+    {
+        set_icon_flag();
+    }
+
+    if (strings_match(read_buffer.data, "text"))
+    {
+        set_text_flag();
     }
 
     if (strings_match(first_three, "pwm")) 
@@ -137,6 +150,16 @@ void usart2_handle_interrupt(void)
             read_buffer.data[read_buffer.idx] = '\0';
             read_buffer_ready = true;
         }
+        else if (read_char[0] == '\b' || read_char[0] == 0x7F)
+        {
+            // Backspace received: remove the last character from the buffer
+            if (read_buffer.idx > 0)
+            {
+                read_buffer.idx--;
+                // Echo "\b \b" to visually erase the character on the terminal
+                usart2_print("\b \b");
+            }
+        }
         else
         {
             // Store the incoming character and increment the index
@@ -148,6 +171,7 @@ void usart2_handle_interrupt(void)
 }
 
 // Helper function to compare two strings without including the standard <string.h> library.
+// Backspace characters (0x08 and 0x7F) are skipped to account for mistyped input.
 static bool strings_match (const char * s1, const char * s2)
 {
     while (*s1 && (*s1 == *s2))
@@ -155,6 +179,10 @@ static bool strings_match (const char * s1, const char * s2)
         s1++;
         s2++;
     }
+    
+    // Skip any trailing backspace/del characters that may remain in s1
+    while (*s1 == '\b' || *s1 == 0x7F)
+        s1++;
     
     return *s1 == *s2;
 }

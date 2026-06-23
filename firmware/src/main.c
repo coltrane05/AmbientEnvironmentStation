@@ -32,6 +32,7 @@ int main(void) {
     // ili9341_draw_pixel(120, 160, 0xF800);
 
     const ili9341_colors colors = ILI9341_COLORS;
+    ili9341_fill_screen(colors.BLACK);
 
     uint8_t inc = 0;
 
@@ -68,6 +69,24 @@ int main(void) {
 
 
             reset_color_change_ready();
+        }
+
+        if (icon_flag_is_set() && !screen_draw_is_busy())
+        {
+            ili9341_draw_icon(fahrenheit, FAHRENHEIT_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
+            reset_icon_flag();
+        }
+
+        if (text_flag_is_set() && !screen_draw_is_busy())
+        {
+            ili9341_draw_string("868.18 hPa", 20, 30, 0xFFFF, 0x0000);
+            reset_text_flag();
+        }
+
+        if (clear_text_is_set() && !screen_draw_is_busy())
+        {
+            ili9341_clear_text();
+            reset_clear_text_flag();
         }
 
         if (bme_data_is_ready()) 
