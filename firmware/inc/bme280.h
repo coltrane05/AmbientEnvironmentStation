@@ -22,6 +22,14 @@
 #define BME280_PRES_DATA_START_REG 0xF7
 #define BME280_HUM_DATA_START_REG 0xFD
 
+typedef enum
+{
+    BME280_TEMP,
+    BME280_PRES,
+    BME280_HUM,
+    BME280_ALL
+} bme280_display_state_t;
+
 void reset_check_BME (void);
 void set_check_BME (void);
 uint8_t get_check_BME (void);
@@ -34,5 +42,20 @@ void start_bme_data_collection (void);
 
 bool bme_data_is_ready (void);
 void process_and_print_bme_data (void);
+void process_and_display_all_bme_data (void);
+void process_and_display_bme_temperature_data (void);
+void process_and_display_bme_pressure_data (void);
+void process_and_display_bme_humidity_data (void);
+
+void bme280_increment_display_state (void);
+void bme280_decrement_display_state (void);
+bme280_display_state_t get_bme280_display_state (void);
+
+void toggle_celsius_mode (void);
+bool is_in_celsius_mode (void);
+
+void set_celsius_mode_changed (void);
+void reset_celsius_mode_changed (void);
+bool celsius_mode_changed (void);
 
 #endif

@@ -1,6 +1,8 @@
 #include "bme280.h"
 #include "i2c.h"
 #include "usart.h"
+#include "ili9341.h"
+#include "spi.h"
 #include <stddef.h>
 
 // Calibration data for temperature and pressure and humidity.
@@ -28,14 +30,29 @@ static int16_t dig_H4 = 0;
 static int16_t dig_H5 = 0;
 static int8_t dig_H6 = 0;
 
+static int32_t adc_P;
+static int32_t adc_T;
+static int32_t adc_H;
+
+static int32_t T;
+static uint32_t P;
+static uint32_t H;
+
 static volatile uint8_t check_BME = 0;
 
 static uint8_t background_data_buffer[8];
 volatile bool bme_data_ready = false;
 
+static bool celsius_mode = false;
+static bool celsius_mode_changed_flag = false; 
+
+static bme280_display_state_t display_state = 0;
+
 static int32_t t_fine;
 
 // Private fuction declarations
+void process_data_helper (void);
+
 void format_temp_string (int32_t temp, char* buffer, uint32_t max_len);
 void format_pres_string (uint32_t pres, char* buffer, uint32_t max_len);
 void format_hum_string (uint32_t hum, char* buffer, uint32_t max_len);
@@ -252,6 +269,17 @@ void format_temp_string(int32_t temp, char* buffer, uint32_t max_len)
     if (buff_idx < max_len - 1) buffer[buff_idx++] = '.';
     if (buff_idx < max_len - 1) buffer[buff_idx++] = (decimal / 10) + '0';
     if (buff_idx < max_len - 1) buffer[buff_idx++] = (decimal % 10) + '0';
+
+    if (buff_idx < max_len - 1) buffer[buff_idx++] = ' ';
+
+    if (celsius_mode)
+    {
+        buffer[buff_idx++] = 'C';
+    }
+    else
+    {
+        buffer[buff_idx++] = 'F';
+    }
     
     buffer[buff_idx] = '\0';
 }
@@ -290,6 +318,11 @@ void format_pres_string(uint32_t pres, char* buffer, uint32_t max_len)
     if (buff_idx < max_len - 1) buffer[buff_idx++] = '.';
     if (buff_idx < max_len - 1) buffer[buff_idx++] = (decimal / 10) + '0';
     if (buff_idx < max_len - 1) buffer[buff_idx++] = (decimal % 10) + '0';
+
+    if (buff_idx < max_len - 1) buffer[buff_idx++] = ' ';
+    if (buff_idx < max_len - 1) buffer[buff_idx++] = 'h';
+    if (buff_idx < max_len - 1) buffer[buff_idx++] = 'P';
+    if (buff_idx < max_len - 1) buffer[buff_idx++] = 'a';
 
     buffer[buff_idx] = '\0';
 }
@@ -330,6 +363,9 @@ void format_hum_string(uint32_t hum, char* buffer, uint32_t max_len)
     if (buff_idx < max_len - 1) buffer[buff_idx++] = ((((decimal * 1000) / 1024) % 100) / 10) + '0';
     if (buff_idx < max_len - 1) buffer[buff_idx++] = (((decimal * 1000) / 1024) % 10) + '0';
 
+    if (buff_idx < max_len - 1) buffer[buff_idx++] = ' ';
+    if (buff_idx < max_len - 1) buffer[buff_idx++] = '%';
+
     buffer[buff_idx] = '\0';
 }
 
@@ -347,24 +383,29 @@ bool bme_data_is_ready(void)
     return bme_data_ready;
 }
 
+void process_data_helper(void)
+{
+    adc_P = ((uint32_t)background_data_buffer[0] << 12) |
+                    ((uint32_t)background_data_buffer[1] << 4)  |
+                    (background_data_buffer[2] >> 4);
+
+    adc_T = ((uint32_t)background_data_buffer[3] << 12) |
+                    ((uint32_t)background_data_buffer[4] << 4)  |
+                    (background_data_buffer[5] >> 4);
+
+    adc_H = ((uint32_t)background_data_buffer[6] << 8) |
+                    ((uint32_t)background_data_buffer[7]);
+
+    T = calculate_bme_temp(adc_T);
+    P = calculate_bme_pres(adc_P);
+    H = calculate_bme_hum(adc_H);
+}
+
 // Function to take raw all raw analog data from the BME280 and convert it to
 // human readable data and print it to the USART terminal.
 void process_and_print_bme_data(void) 
 {
-    int32_t adc_P = ((uint32_t)background_data_buffer[0] << 12) |
-                    ((uint32_t)background_data_buffer[1] << 4)  |
-                    (background_data_buffer[2] >> 4);
-
-    int32_t adc_T = ((uint32_t)background_data_buffer[3] << 12) |
-                    ((uint32_t)background_data_buffer[4] << 4)  |
-                    (background_data_buffer[5] >> 4);
-
-    int32_t adc_H = ((uint32_t)background_data_buffer[6] << 8) |
-                    ((uint32_t)background_data_buffer[7]);
-
-    int32_t T = convert_celsius_to_fahrenheit(calculate_bme_temp(adc_T));
-    uint32_t P = calculate_bme_pres(adc_P);
-    uint32_t H = calculate_bme_hum(adc_H);
+    process_data_helper();
 
     char pres_buffer[15];
     char temp_buffer[15];
@@ -389,6 +430,180 @@ void process_and_print_bme_data(void)
     usart2_println("%");
     usart2_println("");
     bme_data_ready = false;
+}
+
+void process_and_display_all_bme_data(void)
+{
+    process_data_helper();
+
+    char pres_buffer[15];
+    char temp_buffer[15];
+    char hum_buffer[15];
+
+    uint32_t max_len = 15;
+
+    if (celsius_mode)
+    {
+        format_temp_string(T, temp_buffer, max_len);
+    }
+    else
+    {
+        T = convert_celsius_to_fahrenheit(T);
+    }
+
+    format_pres_string(P, pres_buffer, max_len);
+    format_temp_string(T, temp_buffer, max_len);
+    format_hum_string(H, hum_buffer, max_len);
+
+    if (text_bounds.text_is_displayed)
+    {
+        ili9341_clear_text();
+        // Wait for the clear-text DMA to finish before starting the draw
+        while (screen_draw_is_busy())
+        {
+            spi2_process_callbacks();
+        }
+    }
+
+    ili9341_draw_string(temp_buffer, 150, 100, 0xFFFF, 0x0000);
+    while (screen_draw_is_busy())
+    {
+        spi2_process_callbacks();
+    }
+
+    ili9341_draw_string(pres_buffer, 150, 130, 0xFFFF, 0x0000);
+    while (screen_draw_is_busy())
+    {
+        spi2_process_callbacks();
+    }
+
+    ili9341_draw_string(hum_buffer, 150, 160, 0xFFFF, 0x0000);
+    while (screen_draw_is_busy())
+    {
+        spi2_process_callbacks();
+    }
+
+    bme_data_ready = false;
+}
+
+void process_and_display_bme_temperature_data(void)
+{
+    process_data_helper();
+
+    char temp_buffer[15];
+    uint32_t max_len = 15;
+
+    if (celsius_mode)
+    {
+        format_temp_string(T, temp_buffer, max_len);
+    }
+    else
+    {
+        T = convert_celsius_to_fahrenheit(T);
+    }
+
+    format_temp_string(T, temp_buffer, max_len);
+
+    // Only clear previous text if there was actually text displayed
+    if (text_bounds.text_is_displayed)
+    {
+        ili9341_clear_text();
+        // Wait for the clear-text DMA to finish before starting the draw
+        while (screen_draw_is_busy())
+        {
+            spi2_process_callbacks();
+        }
+    }
+
+    ili9341_draw_string(temp_buffer, 150, 120, 0xFFFF, 0x0000);
+
+    bme_data_ready = false;
+}
+
+void process_and_display_bme_pressure_data(void)
+{
+    process_data_helper();
+
+    char pres_buffer[15];
+    uint32_t max_len = 15;
+
+    format_pres_string(P, pres_buffer, max_len);
+
+    if (text_bounds.text_is_displayed)
+    {
+        ili9341_clear_text();
+        while (screen_draw_is_busy())
+        {
+            spi2_process_callbacks();
+        }
+    }
+
+    ili9341_draw_string(pres_buffer, 150, 120, 0xFFFF, 0x0000);
+
+    bme_data_ready = false;
+}
+
+void process_and_display_bme_humidity_data(void)
+{
+    process_data_helper();
+
+    char hum_buffer[15];
+    uint32_t max_len = 15;
+
+    format_hum_string(H, hum_buffer, max_len);
+
+    if (text_bounds.text_is_displayed)
+    {
+        ili9341_clear_text();
+        while (screen_draw_is_busy())
+        {
+            spi2_process_callbacks();
+        }
+    }
+
+    ili9341_draw_string(hum_buffer, 150, 120, 0xFFFF, 0x0000);
+
+    bme_data_ready = false;
+}
+
+void bme280_increment_display_state(void)
+{
+    display_state = (display_state + 1) % 4;
+}
+
+void bme280_decrement_display_state(void)
+{
+    display_state = (display_state + 3) % 4;
+}
+
+bme280_display_state_t get_bme280_display_state(void)
+{
+    return display_state;
+}
+
+void toggle_celsius_mode(void)
+{
+    celsius_mode = !celsius_mode;
+}
+
+bool is_in_celsius_mode(void)
+{
+    return celsius_mode;
+}
+
+void set_celsius_mode_changed(void)
+{
+    celsius_mode_changed_flag = true;
+}
+
+void reset_celsius_mode_changed(void)
+{
+    celsius_mode_changed_flag = false;
+}
+
+bool celsius_mode_changed(void)
+{
+    return celsius_mode_changed_flag;
 }
 
 // Function to kick off data collection from BME280, utilizing the I2C interface

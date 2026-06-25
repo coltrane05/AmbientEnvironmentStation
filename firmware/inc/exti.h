@@ -20,5 +20,6 @@ typedef struct {
 #define EXTI ((Custom_EXTI_t *) EXTI_BASE)
 
 void exti15_10_handle_interrupt(void);
+void exti9_5_handle_interrupt(void);
 
 #endif

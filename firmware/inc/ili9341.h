@@ -38,6 +38,8 @@ typedef struct
     uint16_t max_y;
 } ili9341_text_bounds_t;
 
+extern ili9341_text_bounds_t text_bounds;
+
 void ili9341_init (void);
 void ili9341_send_command (uint8_t command);
 void ili9341_send_data (const uint8_t * data_buffer, uint32_t buffer_size);
@@ -73,5 +75,13 @@ bool icon_flag_is_set (void);
 void set_text_flag (void);
 void reset_text_flag (void);
 bool text_flag_is_set (void);
+
+void set_change_state_forward_flag (void);
+void reset_change_state_forward_flag (void);
+bool change_state_forward_flag_is_set (void);
+
+void set_change_state_backward_flag (void);
+void reset_change_state_backward_flag (void);
+bool change_state_backward_flag_is_set (void);
 
 #endif

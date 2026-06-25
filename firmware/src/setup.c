@@ -45,17 +45,32 @@ void setup(void)
     NVIC->ISER[0] |= (1U << 31); // I2C1_EV Interrupt (IRQ 31)
     NVIC->ISER[1] |= (1U << 0); // I2C1_ER Interrupt (IRQ 32)
     NVIC->ISER[0] |= (1U << 15); // DMA1 Stream4 Interrupt (IRQ 15)
+    NVIC->ISER[0] |= (1U << 23); // EXTI9_5 Interrupt (IRQ 23)
 
 
-    // System Config for external interrupt on line 13 Port C
+    // System Config for external interrupts
     SYSCFG->EXTICR4 &= ~(0xF << 4); // Clear EXTI13 (4 bits starting at bit 4 on EXTICR4)
     SYSCFG->EXTICR4 |= (0x2 << 4); // Set EXTI13 to 2 (The setting for Port C)
+    SYSCFG->EXTICR3 &= ~(0xF << 0); // Clear EXTI8
+    SYSCFG->EXTICR3 |= (0x2 << 0); // Set EXTI8 to 2 (The setting for Port C)
+    SYSCFG->EXTICR3 &= ~(0xF << 4); // Clear EXTI9
+    SYSCFG->EXTICR3 |= (0x2 << 4); // Set EXTI9 to 2
+    SYSCFG->EXTICR2 &= ~(0xF << 8); // Clear EXTI6
+    SYSCFG->EXTICR2 |= (0x2 << 8); // Set EXTI6 to 2
 
     // External interrupt setup
     SET_BIT(EXTI->IMR, 13); // Unmask line 13
     SET_BIT(EXTI->FTSR, 13); // Set interrupt to trigger on falling edge.
                              // Button is pulled high so when you press
                              // there is a falling edge.
+    SET_BIT(EXTI->IMR, 8); // Unmask line 8
+    SET_BIT(EXTI->FTSR, 8); // Enable falling trigger on line 8
+    SET_BIT(EXTI->RTSR, 8); // Enable rising trigger on line 8
+    SET_BIT(EXTI->IMR, 9); // Unmask line 9
+    SET_BIT(EXTI->FTSR, 9); // Enable falling trigger on line 9
+    SET_BIT(EXTI->RTSR, 9); // Enable rising trigger on line 9
+    SET_BIT(EXTI->IMR, 6);  // Unmask line 6
+    SET_BIT(EXTI->FTSR, 6); // Enable falling trigger on line 6
 
     // Set GPIO pin modes
     // SET_2BIT_FIELD(GPIOA->MODER, 5, 0b01); // Output Port A pin 5 User Led
@@ -64,6 +79,12 @@ void setup(void)
     SET_2BIT_FIELD(GPIOA->MODER, 3, 0b10); // Alternate Function Port A pin 3 USART2_RX
     SET_2BIT_FIELD(GPIOB->MODER, 6, 0b10); // Alternate Function Port B pin 6 I2C1_SCL
     SET_2BIT_FIELD(GPIOB->MODER, 7, 0b10); // Alternate Function Port B pin 7 I2C1_SDA
+    SET_2BIT_FIELD(GPIOC->MODER, 8, 0b00); // Input Port C pin 8 (for rotary encoder A)
+    SET_2BIT_FIELD(GPIOC->MODER, 9, 0b00); // Input Port C pin 9 (for rotary encoder B)
+    SET_2BIT_FIELD(GPIOC->MODER, 6, 0b00); // Input Port C pin 6 (for rotary encoder push button)
+
+    // Set Pull-up/Pull-down internal resisitors
+    SET_2BIT_FIELD(GPIOC->PUPDR, 6, 0b01); // Set pull up on Port C pin 6
 
     // Set GPIO output type
     SET_BIT(GPIOB->OTYPER, 6); // Port B pin 6 output open drain (I2C1_SCL)

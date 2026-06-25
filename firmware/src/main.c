@@ -9,8 +9,12 @@
 #include "timx.h"
 #include "spi.h"
 #include "ili9341.h"
-#include "fahrenheit.h"
-#include "pressure.h"
+#include "fahrenheit_icon.h"
+#include "celsius_icon.h"
+#include "humidity_icon.h"
+#include "pressure_icon.h"
+#include "weather_station_icon.h"
+#include "ky040.h"
  
 int main(void) {
     setup();
@@ -26,54 +30,45 @@ int main(void) {
     __asm("cpsie i"); // Enable global iterrupts
 
     bme280_init();
+
     ili9341_reset();
     ili9341_init();
 
-    // ili9341_draw_pixel(120, 160, 0xF800);
+    ky040_init();
+
+    uint32_t last_bme280_read = 0;
+    start_bme_data_collection();
 
     const ili9341_colors colors = ILI9341_COLORS;
     ili9341_fill_screen(colors.BLACK);
 
-    uint8_t inc = 0;
-
     while(1) 
     {
         spi2_process_callbacks();
-        if (get_check_BME()) 
+
+        if (millis() - last_bme280_read > 5000)
         {
             start_bme_data_collection();
-            reset_check_BME();
+            last_bme280_read = millis();
+            // usart2_println("reading BME280 data...");
         }
 
-        if (color_change_is_ready() && !screen_draw_is_busy())
+        if (celsius_mode_changed())
         {
-            if (inc == 0) 
-            {
-                ili9341_fill_screen(colors.BLACK);
-                inc = 1;
-            }
-            else if (inc == 1) 
-            {
-                ili9341_draw_icon(fahrenheit, FAHRENHEIT_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
-                inc = 2;
-            }
-            else if (inc == 2) {
-                ili9341_draw_icon(pressure, PRESSURE_WIDTH * PRESSURE_HEIGHT, 20, 60, PRESSURE_WIDTH, PRESSURE_HEIGHT);
-                inc = 3;
-            }
-            else 
-            {
-                ili9341_draw_string("868.18 hPa", 20, 30, 0xFFFF, 0x0000);
-                inc = 1;
-            }
-
-
-            reset_color_change_ready();
+            start_bme_data_collection();
+            last_bme280_read = millis();
+            reset_celsius_mode_changed();
         }
+
+        // if (get_check_BME()) 
+        // {
+        //     start_bme_data_collection();
+        //     reset_check_BME();
+        // }
 
         if (icon_flag_is_set() && !screen_draw_is_busy())
         {
-            ili9341_draw_icon(fahrenheit, FAHRENHEIT_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
+            ili9341_draw_icon(fahrenheit_icon, FAHRENHEIT_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
             reset_icon_flag();
         }
 
@@ -89,9 +84,52 @@ int main(void) {
             reset_clear_text_flag();
         }
 
-        if (bme_data_is_ready()) 
+        if (bme_data_is_ready() && !screen_draw_is_busy()) 
         {
-            process_and_print_bme_data();
+            if (get_bme280_display_state() == BME280_TEMP)
+            {
+                if (is_in_celsius_mode()){
+                    ili9341_draw_icon(celsius_icon, CELSIUS_WIDTH * CELSIUS_HEIGHT, 15, 60, CELSIUS_WIDTH, CELSIUS_HEIGHT);
+                }
+                else
+                {
+                    ili9341_draw_icon(fahrenheit_icon, FAHRENHEIT_WIDTH * FAHRENHEIT_HEIGHT, 15, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
+                }
+
+                while (screen_draw_is_busy())
+                {
+                    spi2_process_callbacks();
+                }
+
+                process_and_display_bme_temperature_data();
+            }
+            else if (get_bme280_display_state() == BME280_PRES)
+            {
+                ili9341_draw_icon(pressure_icon, PRESSURE_WIDTH * PRESSURE_HEIGHT, 15, 60, PRESSURE_WIDTH, PRESSURE_HEIGHT);
+                while (screen_draw_is_busy())
+                {
+                    spi2_process_callbacks();
+                }
+                process_and_display_bme_pressure_data();
+            }
+            else if (get_bme280_display_state() == BME280_HUM)
+            {
+                ili9341_draw_icon(humidity_icon, HUMIDITY_WIDTH * HUMIDITY_HEIGHT, 15, 60, HUMIDITY_WIDTH, HUMIDITY_HEIGHT);
+                while (screen_draw_is_busy())
+                {
+                    spi2_process_callbacks();
+                }
+                process_and_display_bme_humidity_data();
+            }
+            else
+            {
+                ili9341_draw_icon(weather_station_icon, WEATHER_STATION_WIDTH * WEATHER_STATION_HEIGHT, 15, 60, WEATHER_STATION_WIDTH, WEATHER_STATION_HEIGHT);
+                while (screen_draw_is_busy())
+                {
+                    spi2_process_callbacks();
+                }
+                process_and_display_all_bme_data();
+            }
         }
 
         if (read_char_is_ready()) 
@@ -116,6 +154,22 @@ int main(void) {
             set_current_duty_cycle(new_duty_cycle);
 
             set_previous_systick_count(millis());
+        }
+
+        if (change_state_forward_flag_is_set())
+        {
+            bme280_increment_display_state();
+            start_bme_data_collection();
+            last_bme280_read = millis();
+            reset_change_state_forward_flag();
+        }
+
+        if (change_state_backward_flag_is_set())
+        {
+            bme280_decrement_display_state();
+            start_bme_data_collection();
+            last_bme280_read = millis();
+            reset_change_state_backward_flag();
         }
     }
     return 0;

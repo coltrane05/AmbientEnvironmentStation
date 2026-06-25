@@ -9,7 +9,10 @@ bool screen_draw_busy = false;
 bool clear_text_flag = false;
 bool icon_flag = false;
 bool text_flag = false;
+bool change_state_forward_flag = false;
+bool change_state_backward_flag = false;
 uint16_t background_color = 0x0000;
+
 
 ili9341_string_context_t string_context;
 ili9341_text_bounds_t text_bounds = {
@@ -50,7 +53,7 @@ static const uint8_t ili9341_init_sequence[] = {
 
     // Frame Rate and Display Function Control
     0xB1, 2, 0x00, 0x10,  // RTNA=16 → ~119 Hz (was 0x1B)
-    0xB6, 3, 0x0A, 0x82, 0x27,  // ISC=5 (was 0x08, ISC=0) — reduces edge crosstalk
+    0xB6, 3, 0x0C, 0x82, 0x27,  // ISC=5 (was 0x08, ISC=0) — reduces edge crosstalk
     0xF2, 1, 0x00,
     0x26, 1, 0x04,
 
@@ -246,7 +249,19 @@ void ili9341_draw_character(char character, uint16_t x, uint16_t y, uint16_t col
 
 void ili9341_draw_string(char * string, uint16_t x, uint16_t y, uint16_t color, uint16_t bg_color)
 {
-    string_context.string = string;
+    screen_draw_busy = true;
+    // Copy the caller's string into a static buffer so the pointer remains
+    // valid across the non-blocking DMA callback chain after the caller returns.
+    static char string_copy[64];
+    uint32_t i = 0;
+    while (string[i] != '\0' && i < sizeof(string_copy) - 1)
+    {
+        string_copy[i] = string[i];
+        i++;
+    }
+    string_copy[i] = '\0';
+
+    string_context.string = string_copy;
     string_context.x = x;
     string_context.y = y;
     string_context.color = color;
@@ -322,6 +337,10 @@ void ili9341_draw_string_callback(void)
         string_context.cursor += string_context.current_advance;
         string_context.string++;
     }
+    else
+    {
+        screen_draw_busy = false;
+    }
 }
 
 bool color_change_is_ready(void)
@@ -391,5 +410,35 @@ void reset_text_flag(void)
 bool text_flag_is_set(void)
 {
     return text_flag;
+}
+
+void set_change_state_forward_flag(void)
+{
+    change_state_forward_flag = true;
+}
+
+void reset_change_state_forward_flag(void)
+{
+    change_state_forward_flag = false;
+}
+
+bool change_state_forward_flag_is_set(void)
+{
+    return change_state_forward_flag;
+}
+
+void set_change_state_backward_flag(void)
+{
+    change_state_backward_flag = true;
+}
+
+void reset_change_state_backward_flag(void)
+{
+    change_state_backward_flag = false;
+}
+
+bool change_state_backward_flag_is_set(void)
+{
+    return change_state_backward_flag;
 }
   

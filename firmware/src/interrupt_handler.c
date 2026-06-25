@@ -47,3 +47,8 @@ void DMA1_Stream4_IRQHandler(void)
 {
     spi2_handle_dma_interrupt();
 }
+
+void EXTI9_5_IRQHandler(void)
+{
+    exti9_5_handle_interrupt();
+}
