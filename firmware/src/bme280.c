@@ -442,11 +442,7 @@ void process_and_display_all_bme_data(void)
 
     uint32_t max_len = 15;
 
-    if (celsius_mode)
-    {
-        format_temp_string(T, temp_buffer, max_len);
-    }
-    else
+    if (!celsius_mode)
     {
         T = convert_celsius_to_fahrenheit(T);
     }
@@ -493,11 +489,7 @@ void process_and_display_bme_temperature_data(void)
     char temp_buffer[15];
     uint32_t max_len = 15;
 
-    if (celsius_mode)
-    {
-        format_temp_string(T, temp_buffer, max_len);
-    }
-    else
+    if (!celsius_mode)
     {
         T = convert_celsius_to_fahrenheit(T);
     }
@@ -516,6 +508,13 @@ void process_and_display_bme_temperature_data(void)
     }
 
     ili9341_draw_string(temp_buffer, 150, 120, 0xFFFF, 0x0000);
+
+    // Wait for the screen to finish drawing before returning to the main loop,
+    // so that screen_draw_busy is false and the next BME update can proceed.
+    while (screen_draw_is_busy())
+    {
+        spi2_process_callbacks();
+    }
 
     bme_data_ready = false;
 }
@@ -540,6 +539,11 @@ void process_and_display_bme_pressure_data(void)
 
     ili9341_draw_string(pres_buffer, 150, 120, 0xFFFF, 0x0000);
 
+    while (screen_draw_is_busy())
+    {
+        spi2_process_callbacks();
+    }
+
     bme_data_ready = false;
 }
 
@@ -562,6 +566,11 @@ void process_and_display_bme_humidity_data(void)
     }
 
     ili9341_draw_string(hum_buffer, 150, 120, 0xFFFF, 0x0000);
+
+    while (screen_draw_is_busy())
+    {
+        spi2_process_callbacks();
+    }
 
     bme_data_ready = false;
 }
@@ -610,5 +619,12 @@ bool celsius_mode_changed(void)
 // and custom state machine.
 void start_bme_data_collection(void) 
 {
+    // Guard against re-entrant calls that would corrupt the I2C state machine.
+    // If a read is already in progress, skip this request – the next periodic
+    // poll or encoder turn will retry.
+    if (I2C_read_is_busy())
+    {
+        return;
+    }
     I2C1_master_receive(BME280_ADDR, BME280_DATA_START_REG, 8, background_data_buffer, bme_data_ready_callback);
 }
