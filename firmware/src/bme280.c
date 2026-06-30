@@ -3,6 +3,7 @@
 #include "usart.h"
 #include "ili9341.h"
 #include "spi.h"
+#include "neopixel_ring.h"
 #include <stddef.h>
 
 // Calibration data for temperature and pressure and humidity.
@@ -489,6 +490,14 @@ void process_and_display_bme_temperature_data(void)
     char temp_buffer[15];
     uint32_t max_len = 15;
 
+    neopixel_color_t temp_color;
+    // T is in hundredths of °C: min=15°C (1500), max=35°C (3500)
+    get_temperature_color(T, 1555, 2600, &temp_color.r, &temp_color.g, &temp_color.b);
+    for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++)
+    {
+        set_neopixel_color(temp_color, i);
+    }
+
     if (!celsius_mode)
     {
         T = convert_celsius_to_fahrenheit(T);
@@ -515,6 +524,8 @@ void process_and_display_bme_temperature_data(void)
     {
         spi2_process_callbacks();
     }
+
+    send_neopixel_data();
 
     bme_data_ready = false;
 }

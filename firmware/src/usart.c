@@ -93,7 +93,7 @@ void process_read_buffer(void)
         uint8_t second_digit = (uint8_t)read_buffer.data[5] - '0';
         uint16_t duty_cycle = (first_digit * 10) + second_digit;
         set_current_duty_cycle(duty_cycle);
-        set_pwm_duty_cycle(duty_cycle);
+        set_tim2_pwm_duty_cycle(duty_cycle);
     }
 
     // Clear the buffer state for the next command

@@ -25,18 +25,12 @@ void setup(void)
     SET_BIT(RCC->APB1ENR, 17); // USART2 (Bit 17)
     SET_BIT(RCC->APB1ENR, 21); // I2C1 (Bit 21)
     SET_BIT(RCC->AHB1ENR, 21); // DMA1
+    SET_BIT(RCC->APB1ENR, 1); // TIM3
 
     // Dummy reads to ensure clocks are enabled before peripheral access
     (void)RCC->AHB1ENR;
     (void)RCC->APB1ENR;
     (void)RCC->APB2ENR;
-    
-    //TIM2 setup
-    // TIM2->PSC = (SYSTEM_CLOCK / 1000) - 1; // Prescaler value. With 16MHz clock, this gives 1ms period
-    // SET_BIT(TIM2->DIER, 0); // Enable Update Interrupt
-    // SET_BIT(TIM2->EGR, 0); // Generate an update event to load the prescaler value immediately
-    // TIM2->SR = 0; // Clear pending interrupt
-    // SET_BIT(TIM2->CR1, 0); // Enable Counter
 
     // Interrupt Setup
     NVIC->ISER[0] |= (1U << 28); // TIM2 Interrupt (IRQ 28)
@@ -45,6 +39,7 @@ void setup(void)
     NVIC->ISER[0] |= (1U << 31); // I2C1_EV Interrupt (IRQ 31)
     NVIC->ISER[1] |= (1U << 0); // I2C1_ER Interrupt (IRQ 32)
     NVIC->ISER[0] |= (1U << 15); // DMA1 Stream4 Interrupt (IRQ 15)
+    NVIC->ISER[1] |= (1U << 15); // DMA1 Stream7 Interrupt (IRQ 47)
     NVIC->ISER[0] |= (1U << 23); // EXTI9_5 Interrupt (IRQ 23)
 
 
@@ -82,6 +77,7 @@ void setup(void)
     SET_2BIT_FIELD(GPIOC->MODER, 8, 0b00); // Input Port C pin 8 (for rotary encoder A)
     SET_2BIT_FIELD(GPIOC->MODER, 9, 0b00); // Input Port C pin 9 (for rotary encoder B)
     SET_2BIT_FIELD(GPIOC->MODER, 6, 0b00); // Input Port C pin 6 (for rotary encoder push button)
+    SET_2BIT_FIELD(GPIOB->MODER, 0, 0b10); // Alternate Function Port B pin 0 TIM3
 
     // Set Pull-up/Pull-down internal resisitors
     SET_2BIT_FIELD(GPIOC->PUPDR, 6, 0b01); // Set pull up on Port C pin 6
@@ -89,6 +85,9 @@ void setup(void)
     // Set GPIO output type
     SET_BIT(GPIOB->OTYPER, 6); // Port B pin 6 output open drain (I2C1_SCL)
     SET_BIT(GPIOB->OTYPER, 7); // Port B pin 7 output open drain (I2C1_SDA)
+
+    // Set GPIO speed
+    SET_2BIT_FIELD(GPIOB->OSPEEDR, 0, 0b11); // Port B pin 0 Very High Speed
 
     // Set alternate function GPIO Pins
     GPIOA->AFRL &= ~(0xF << (2 * 4)); // Clear AFRL for Port A pin 2
@@ -103,6 +102,9 @@ void setup(void)
 
     GPIOA->AFRL &= ~(0xF << (5 * 4)); // Clear AFRL for Port A pin 5
     GPIOA->AFRL |= (0x1 << (5 * 4)); // Set AFRL for Port A pin 5 to AF1 (TIM2_CH1)
+
+    GPIOB->AFRL &= ~(0xF << (0 * 4)); // Clear AFRL for Port B pin 0
+    GPIOB->AFRL |= (0x2 << (0 * 4)); // Set AFRL for Port B pin 0 to AF2 (TIM3_CH3)
 
     // Setup USART2
     USART2->BRR = 365U; // 42MHz APB1 clock / 115200 baud rate ~ 365

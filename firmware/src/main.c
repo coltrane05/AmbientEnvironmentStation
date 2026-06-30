@@ -15,6 +15,7 @@
 #include "pressure_icon.h"
 #include "weather_station_icon.h"
 #include "ky040.h"
+#include "neopixel_ring.h"
  
 int main(void) {
     setup();
@@ -36,21 +37,71 @@ int main(void) {
 
     ky040_init();
 
+    neopixel_init();
+
     uint32_t last_bme280_read = 0;
     start_bme_data_collection();
 
     const ili9341_colors colors = ILI9341_COLORS;
     ili9341_fill_screen(colors.BLACK);
 
+    uint8_t brightness = 1;
+
+    // -- NeoPixel test pattern --
+    neopixel_color_t test_colors[] = {
+        {.r = 255 / brightness, .g = 0, .b = 0},   // Red
+        {.r = 0, .g = 255 / brightness, .b = 0},   // Green
+        {.r = 0, .g = 0, .b = 255 / brightness},   // Blue
+        {.r = 255 / brightness, .g = 255 / brightness, .b = 255 / brightness}, // White
+    };
+    uint8_t test_pos = 0;
+    uint8_t test_color_idx = 0;
+    uint32_t last_neopixel_test = 0;
+    uint32_t last_transfer_count = 0;
+
+    // Set all LEDs to red initially to test data propagation
+    for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++) {
+        set_neopixel_color(test_colors[0], i);
+    }
+    
+    send_neopixel_data();
+    // usart2_print("NeoPixel: all RED sent\r\n");
+
     while(1) 
     {
         spi2_process_callbacks();
+
+        // -- NeoPixel rotating test: every 3 seconds, advance position and cycle colors --
+        // if (millis() - last_neopixel_test > 500) {
+
+        //     last_neopixel_test = millis();
+
+        //     // Check if previous DMA transfer completed
+        //     uint32_t tc = get_neopixel_transfer_count();
+        //     if (tc > last_transfer_count) {
+        //         usart2_print("DMA xfer OK\r\n");
+        //         last_transfer_count = tc;
+        //     }
+
+        //     // Turn off previous LED
+        //     set_neopixel_color((neopixel_color_t){0,0,0}, test_pos);
+
+        //     // Advance to next position and color
+        //     test_pos = (test_pos + 1) % NUM_NEOPIXEL_LEDS;
+        //     if (test_pos == 0) {
+        //         test_color_idx = (test_color_idx + 1) % 4;
+        //     }
+
+        //     // Set new LED
+        //     neopixel_color_t c = test_colors[test_color_idx];
+        //     set_neopixel_color(c, test_pos);
+        //     send_neopixel_data();
+        // }
 
         if (millis() - last_bme280_read > 5000)
         {
             start_bme_data_collection();
             last_bme280_read = millis();
-            // usart2_println("reading BME280 data...");
         }
 
         if (celsius_mode_changed())
@@ -150,7 +201,7 @@ int main(void) {
             }
 
             uint16_t new_duty_cycle = get_current_duty_cycle() + get_led_breathing_direction();
-            set_pwm_duty_cycle(new_duty_cycle);
+            set_tim2_pwm_duty_cycle(new_duty_cycle);
             set_current_duty_cycle(new_duty_cycle);
 
             set_previous_systick_count(millis());

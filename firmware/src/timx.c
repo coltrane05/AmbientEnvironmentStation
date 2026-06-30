@@ -62,7 +62,7 @@ void tim2_standard_init(void)
     TIM2->CR1 |= (1 << 0);
 }
 
-void set_pwm_duty_cycle(uint16_t duty_cycle)
+void set_tim2_pwm_duty_cycle(uint16_t duty_cycle)
 {
     uint16_t new_duty_cycle = (33599 * duty_cycle) / 100;
     TIM2->CCR1 = new_duty_cycle;

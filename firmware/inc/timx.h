@@ -6,6 +6,7 @@
 // Base addresses for timers. This is specific to the STM32F4 series microcontrollers.
 #define TIM1_BASE 0x40010000
 #define TIM2_BASE 0x40000000
+#define TIM3_BASE 0x40000400
 
 // A structure to represent the TIMx registers.
 typedef struct {
@@ -35,11 +36,11 @@ typedef struct {
 // Define a pointer to the TIMx structure for easy access to the TIMx registers.
 #define TIM1 ((custom_timx_t *) TIM1_BASE)
 #define TIM2 ((custom_timx_t *) TIM2_BASE)
+#define TIM3 ((custom_timx_t *) TIM3_BASE)
 
 void tim2_handle_interrupt (void);
 void tim2_pwm_init (void);
 void tim2_standard_init (void);
-void set_pwm_duty_cycle (uint16_t duty_cycle);
-
+void set_tim2_pwm_duty_cycle (uint16_t duty_cycle);
 
 #endif

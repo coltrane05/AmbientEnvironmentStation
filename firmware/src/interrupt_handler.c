@@ -9,6 +9,7 @@
 #include "i2c.h"
 #include "systick.h"
 #include "spi.h"
+#include "neopixel_ring.h"
 
 void Systick_Handler(void)
 {
@@ -51,4 +52,9 @@ void DMA1_Stream4_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
     exti9_5_handle_interrupt();
+}
+
+void DMA1_Stream7_IRQHandler(void)
+{
+    neopixel_dma_handle_interrupt();
 }
