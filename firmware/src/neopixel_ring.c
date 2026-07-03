@@ -39,6 +39,8 @@ neopixel_color_t neopixel_ring_colors[] = {
     {.r = 0, .g = 0, .b = 0},    
 };
 
+uint16_t color_cycle_steps[NUM_NEOPIXEL_LEDS];
+
 // Private function declarations
 void tim3_init (void);
 void dma1_stream7_channel3_init (void);
@@ -78,6 +80,11 @@ void neopixel_init(void)
     tim3_init(); // Initialize TIM3 for PWM output
 
     dma1_stream7_channel3_init(); // Initialize DMA for neopixel data transfer
+
+    for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++)
+    {
+        color_cycle_steps[i] = (1530 / NUM_NEOPIXEL_LEDS) * i;
+    }
 }
 
 void set_neopixel_color(neopixel_color_t color, uint8_t pos)
@@ -196,5 +203,119 @@ void get_temperature_color(int32_t temp, int32_t min_temp, int32_t max_temp, uin
         *r = (t - 128) * 2;
         *g = 255 - ((t - 128) * 2);
         *b = 0;
+    }
+}
+
+void get_humidity_color(uint32_t humidity, uint32_t min_humidity, uint32_t max_humidity, uint8_t * r, uint8_t * g, uint8_t * b)
+{
+    if (max_humidity <= min_humidity)
+    {
+        *r = 0;
+        *g = 0;
+        *b = 255;
+        return;
+    }
+
+    if (humidity < min_humidity)
+    {
+        humidity = min_humidity;
+    }
+    if (humidity > max_humidity)
+    {
+        humidity = max_humidity;
+    }
+
+    uint32_t range = max_humidity - min_humidity;
+    uint32_t h = ((humidity - min_humidity) * 255) / range;
+
+    *r = 255 - h;
+    *g = 255 - h;
+    *b = 255;
+}
+
+void get_pressure_color(uint32_t pressure, uint32_t min_pressure, uint32_t max_pressure, uint8_t * r, uint8_t * g, uint8_t * b)
+{
+    if (max_pressure <= min_pressure)
+    {
+        *r = 255;
+        *g = 127;
+        *b = 0;
+        return;
+    }
+
+    if (pressure < min_pressure)
+    {
+        pressure = min_pressure;
+    }
+    if (pressure > max_pressure)
+    {
+        pressure = max_pressure;
+    }
+
+    uint32_t range = max_pressure - min_pressure;
+    uint32_t p = ((pressure - min_pressure) * 255) / range;
+
+    *r = 128 + (p / 2);
+    *g = p / 2;
+    *b = 128 - (p / 2);
+}
+
+void set_rgb_animation_colors(void)
+{
+    for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++)
+    {
+        uint16_t step = color_cycle_steps[i];
+
+        if (step < 255)
+        {
+            neopixel_ring_colors[i].r = 255;
+            neopixel_ring_colors[i].g = step;
+            neopixel_ring_colors[i].b = 0;
+        }
+        else if (step < 510)
+        {
+            neopixel_ring_colors[i].r = 255 - (step - 255);
+            neopixel_ring_colors[i].g = 255;
+            neopixel_ring_colors[i].b = 0;
+        }
+        else if (step < 765)
+        {
+            neopixel_ring_colors[i].r = 0;
+            neopixel_ring_colors[i].g = 255;
+            neopixel_ring_colors[i].b = step - 510;
+        }
+        else if (step < 1020)
+        {
+            neopixel_ring_colors[i].r = 0;
+            neopixel_ring_colors[i].g = 255 - (step - 765);
+            neopixel_ring_colors[i].b = 255;
+        }
+        else if (step < 1275)
+        {
+            neopixel_ring_colors[i].r = step - 1020;
+            neopixel_ring_colors[i].g = 0;
+            neopixel_ring_colors[i].b = 255;
+        }
+        else if (step < 1530)
+        {
+            neopixel_ring_colors[i].r = 255;
+            neopixel_ring_colors[i].g = 0;
+            neopixel_ring_colors[i].b = 255 - (step - 1275);
+        }
+    }
+}
+
+void increment_rgb_animation_colors(void)
+{
+    for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++)
+    {
+        if ((i & 1) == 0)
+        {
+            color_cycle_steps[i] = (color_cycle_steps[i] >= 1529) ? 0 : color_cycle_steps[i] + 1;
+        }
+        else
+        {
+            color_cycle_steps[i] = (color_cycle_steps[i] == 0) ? 1529 : color_cycle_steps[i] - 1;
+        }
     }
 }

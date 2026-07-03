@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include "led_state_machine.h"
 #include "setup.h"
 #include "interrupt_handler.h"
@@ -39,66 +40,20 @@ int main(void) {
 
     neopixel_init();
 
+    uint32_t last_rgb_animation_increment = 0;
+    bool rgb_animation_active = false;
+
     uint32_t last_bme280_read = 0;
     start_bme_data_collection();
 
     const ili9341_colors colors = ILI9341_COLORS;
     ili9341_fill_screen(colors.BLACK);
 
-    uint8_t brightness = 1;
-
-    // -- NeoPixel test pattern --
-    neopixel_color_t test_colors[] = {
-        {.r = 255 / brightness, .g = 0, .b = 0},   // Red
-        {.r = 0, .g = 255 / brightness, .b = 0},   // Green
-        {.r = 0, .g = 0, .b = 255 / brightness},   // Blue
-        {.r = 255 / brightness, .g = 255 / brightness, .b = 255 / brightness}, // White
-    };
-    uint8_t test_pos = 0;
-    uint8_t test_color_idx = 0;
-    uint32_t last_neopixel_test = 0;
-    uint32_t last_transfer_count = 0;
-
-    // Set all LEDs to red initially to test data propagation
-    for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++) {
-        set_neopixel_color(test_colors[0], i);
-    }
-    
-    send_neopixel_data();
-    // usart2_print("NeoPixel: all RED sent\r\n");
-
     while(1) 
     {
         spi2_process_callbacks();
 
-        // -- NeoPixel rotating test: every 3 seconds, advance position and cycle colors --
-        // if (millis() - last_neopixel_test > 500) {
-
-        //     last_neopixel_test = millis();
-
-        //     // Check if previous DMA transfer completed
-        //     uint32_t tc = get_neopixel_transfer_count();
-        //     if (tc > last_transfer_count) {
-        //         usart2_print("DMA xfer OK\r\n");
-        //         last_transfer_count = tc;
-        //     }
-
-        //     // Turn off previous LED
-        //     set_neopixel_color((neopixel_color_t){0,0,0}, test_pos);
-
-        //     // Advance to next position and color
-        //     test_pos = (test_pos + 1) % NUM_NEOPIXEL_LEDS;
-        //     if (test_pos == 0) {
-        //         test_color_idx = (test_color_idx + 1) % 4;
-        //     }
-
-        //     // Set new LED
-        //     neopixel_color_t c = test_colors[test_color_idx];
-        //     set_neopixel_color(c, test_pos);
-        //     send_neopixel_data();
-        // }
-
-        if (millis() - last_bme280_read > 5000)
+        if (millis() - last_bme280_read > 2000)
         {
             start_bme_data_collection();
             last_bme280_read = millis();
@@ -109,30 +64,6 @@ int main(void) {
             start_bme_data_collection();
             last_bme280_read = millis();
             reset_celsius_mode_changed();
-        }
-
-        // if (get_check_BME()) 
-        // {
-        //     start_bme_data_collection();
-        //     reset_check_BME();
-        // }
-
-        if (icon_flag_is_set() && !screen_draw_is_busy())
-        {
-            ili9341_draw_icon(fahrenheit_icon, FAHRENHEIT_WIDTH * FAHRENHEIT_HEIGHT, 20, 60, FAHRENHEIT_WIDTH, FAHRENHEIT_HEIGHT);
-            reset_icon_flag();
-        }
-
-        if (text_flag_is_set() && !screen_draw_is_busy())
-        {
-            ili9341_draw_string("868.18 hPa", 20, 30, 0xFFFF, 0x0000);
-            reset_text_flag();
-        }
-
-        if (clear_text_is_set() && !screen_draw_is_busy())
-        {
-            ili9341_clear_text();
-            reset_clear_text_flag();
         }
 
         if (bme_data_is_ready() && !screen_draw_is_busy()) 
@@ -153,34 +84,56 @@ int main(void) {
                 }
 
                 process_and_display_bme_temperature_data();
+
+                rgb_animation_active = false;
             }
             else if (get_bme280_display_state() == BME280_PRES)
             {
                 ili9341_draw_icon(pressure_icon, PRESSURE_WIDTH * PRESSURE_HEIGHT, 15, 60, PRESSURE_WIDTH, PRESSURE_HEIGHT);
+
                 while (screen_draw_is_busy())
                 {
                     spi2_process_callbacks();
                 }
+
                 process_and_display_bme_pressure_data();
+
+                rgb_animation_active = false;
             }
             else if (get_bme280_display_state() == BME280_HUM)
             {
                 ili9341_draw_icon(humidity_icon, HUMIDITY_WIDTH * HUMIDITY_HEIGHT, 15, 60, HUMIDITY_WIDTH, HUMIDITY_HEIGHT);
+
                 while (screen_draw_is_busy())
                 {
                     spi2_process_callbacks();
                 }
+
                 process_and_display_bme_humidity_data();
+
+                rgb_animation_active = false;
             }
             else
             {
                 ili9341_draw_icon(weather_station_icon, WEATHER_STATION_WIDTH * WEATHER_STATION_HEIGHT, 15, 60, WEATHER_STATION_WIDTH, WEATHER_STATION_HEIGHT);
+
                 while (screen_draw_is_busy())
                 {
                     spi2_process_callbacks();
                 }
+
                 process_and_display_all_bme_data();
+
+                rgb_animation_active = true;
             }
+        }
+
+        if (rgb_animation_active && (millis() - last_rgb_animation_increment > 1))
+        {
+            last_rgb_animation_increment = millis();
+            set_rgb_animation_colors();
+            send_neopixel_data();
+            increment_rgb_animation_colors();
         }
 
         if (read_char_is_ready()) 

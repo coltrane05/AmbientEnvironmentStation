@@ -491,7 +491,7 @@ void process_and_display_bme_temperature_data(void)
     uint32_t max_len = 15;
 
     neopixel_color_t temp_color;
-    // T is in hundredths of °C: min=15°C (1500), max=35°C (3500)
+    
     get_temperature_color(T, 1555, 2600, &temp_color.r, &temp_color.g, &temp_color.b);
     for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++)
     {
@@ -537,6 +537,14 @@ void process_and_display_bme_pressure_data(void)
     char pres_buffer[15];
     uint32_t max_len = 15;
 
+    neopixel_color_t pres_color;
+    get_pressure_color(P, 21760000, 22528000, &pres_color.r, &pres_color.g, &pres_color.b);
+
+    for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++)
+    {
+        set_neopixel_color(pres_color, i);
+    }
+
     format_pres_string(P, pres_buffer, max_len);
 
     if (text_bounds.text_is_displayed)
@@ -555,6 +563,8 @@ void process_and_display_bme_pressure_data(void)
         spi2_process_callbacks();
     }
 
+    send_neopixel_data();
+
     bme_data_ready = false;
 }
 
@@ -564,6 +574,14 @@ void process_and_display_bme_humidity_data(void)
 
     char hum_buffer[15];
     uint32_t max_len = 15;
+
+    neopixel_color_t hum_color;
+    get_humidity_color(H, 0, 81920, &hum_color.r, &hum_color.g, &hum_color.b);
+
+    for (uint8_t i = 0; i < NUM_NEOPIXEL_LEDS; i++)
+    {
+        set_neopixel_color(hum_color, i);
+    }
 
     format_hum_string(H, hum_buffer, max_len);
 
@@ -582,6 +600,8 @@ void process_and_display_bme_humidity_data(void)
     {
         spi2_process_callbacks();
     }
+
+    send_neopixel_data();
 
     bme_data_ready = false;
 }
